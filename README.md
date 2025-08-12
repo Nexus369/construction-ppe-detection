@@ -87,4 +87,6 @@ MIT License
 
 - YOLOv8 by Ultralytics
 - TailwindCSS for styling
-- Demo images from Freepik 
+- Demo images from Freepik
+
+#Developed By Jasbir Singh Monga 
