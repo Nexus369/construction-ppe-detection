@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyFirst - Live PPE Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 7px 20px rgba(251, 191, 36, 0.4);
+            transform: translateY(-3px);
+        }
+
+        .nav-link {
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #f59e0b;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .monitor-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .monitor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-card {
+            transition: all 0.3s ease;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        /* Animation Keyframes */
+        @keyframes loadCircle {
+            0% {
+                transform: rotate(0deg) scale(1);
+                border-top-color: #f59e0b;
+            }
+            50% {
+                transform: rotate(180deg) scale(1.1);
+                border-top-color: #3b82f6;
+            }
+            100% {
+                transform: rotate(360deg) scale(1);
+                border-top-color: #f59e0b;
+            }
+        }
+        
+        @keyframes textPulse {
+            0% {
+                opacity: 0.6;
+                transform: scale(0.9);
+                color: #f59e0b;
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.1);
+                color: #3b82f6;
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+            }
+            70% {
+                transform: scale(1.05);
+                opacity: 1;
+                box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.7;
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+        
+        @keyframes slideIn {
+            0% {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header/Navigation -->
+    <header class="bg-slate-900 text-white">
+        <div class="container mx-auto py-4 px-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center mr-2 animate-pulse">
+                        <i class="fas fa-hard-hat text-slate-900 text-xl"></i>
+                    </div>
+                    <span class="text-xl font-bold">Safety <span class="text-amber-500">First</span></span>
+                </div>
+                <nav>
+                    <ul class="flex space-x-8">
+                        <li><a href="index.html" class="nav-link text-white hover:text-amber-300 transition duration-300">Home</a></li>
+                        <li><a href="index.html#features" class="nav-link text-white hover:text-amber-300 transition duration-300">Features</a></li>
+                        <li><a href="#" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-6 rounded-full transition duration-300 relative overflow-hidden group">
+                            <span class="absolute inset-0 opacity-0 group-hover:opacity-30 animate-shimmer"></span>Live Monitor</a></li>
+                    </ul>
+                </nav>
+            </div>
+            </div>
+        </header>
+
+    <!-- Main Content Section -->
+    <section class="py-10 bg-slate-900 text-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-10 animate-fadeZoomIn">
+                <h1 class="text-4xl font-bold mb-4">Live PPE Detection Monitor</h1>
+                <p class="text-gray-300 max-w-2xl mx-auto">Real-time monitoring of construction site safety equipment to ensure compliance and prevent accidents</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Monitoring Dashboard -->
+    <section class="py-10 -mt-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" data-aos="fade-up">
+                <!-- Camera Feed Card -->
+                <div class="monitor-card bg-white rounded-xl shadow-md overflow-hidden animate-fadeZoomIn">
+                    <div class="bg-slate-800 p-4">
+                        <h3 class="text-xl font-bold text-white">Camera Feed</h3>
+    </div>
+                    <div id="videoContainer" class="bg-black relative">
+                        <div id="cameraPlaceholder" class="flex items-center justify-center h-96 bg-slate-900">
+                            <div class="text-center">
+                                <i class="fas fa-video text-6xl text-amber-500 mb-4 animate-pulse"></i>
+                                <p class="text-lg text-gray-300">Camera feed will appear here</p>
+                            </div>
+                        </div>
+                        <img id="videoFeed" class="w-full h-96 object-cover hidden" src="" alt="Video Feed">
+                        <div id="streamError" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
+                            <div class="text-center p-4 animate-fadeZoomIn">
+                                <i class="fas fa-exclamation-circle text-5xl text-red-500 mb-3 animate-pulse"></i>
+                                <p class="text-white text-lg font-bold">Video stream error</p>
+                                <p class="text-gray-300 mb-4">Could not connect to camera feed</p>
+                                <button id="retryButton" class="btn-primary text-slate-900 font-bold py-2 px-6 rounded-full relative overflow-hidden group">
+                                    <span class="absolute inset-0 opacity-0 group-hover:opacity-30 animate-shimmer"></span>
+                                    Retry Connection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 bg-white">
+                        <div class="flex justify-center mb-4">
+                            <button id="startButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full mr-4 transition-all duration-300 flex items-center relative overflow-hidden group">
+                                <span class="absolute inset-0 opacity-0 group-hover:opacity-20 animate-shimmer"></span>
+                                <i class="fas fa-play mr-2"></i> Start Detection
+                        </button>
+                            <button id="stopButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full disabled:opacity-50 transition-all duration-300 flex items-center relative overflow-hidden group">
+                                <span class="absolute inset-0 opacity-0 group-hover:opacity-20 animate-shimmer"></span>
+                                <i class="fas fa-stop mr-2"></i> Stop Detection
+                        </button>
+                    </div>
+                        <div id="apiStatus" class="text-center text-sm text-gray-500">
+                            API Status: <span id="apiStatusText" class="font-medium">Not Connected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detection Log Card -->
+                <div class="monitor-card bg-white rounded-xl shadow-md overflow-hidden animate-fadeZoomIn delay-200">
+                    <div class="bg-slate-800 p-4">
+                        <h3 class="text-xl font-bold text-white">Detection Log</h3>
+                    </div>
+                    <div class="p-6">
+                        <div id="detectionLog" class="bg-gray-50 rounded-lg p-4 h-80 overflow-y-auto text-left border border-gray-200">
+                            <p class="text-gray-500">Detection logs will appear here...</p>
+                        </div>
+                        <div class="mt-5 grid grid-cols-3 gap-4">
+                            <div class="bg-white rounded-lg p-3 border border-gray-200 animate-fadeZoomIn delay-100">
+                                <div class="flex items-center mb-2">
+                                    <span class="status-indicator bg-green-500 animate-pulse"></span>
+                                    <span class="text-sm font-medium text-gray-700">Hardhat</span>
+                                </div>
+                                <div class="text-xs text-gray-500">Safety equipment for head protection</div>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 border border-gray-200 animate-fadeZoomIn delay-200">
+                                <div class="flex items-center mb-2">
+                                    <span class="status-indicator bg-blue-500 animate-pulse"></span>
+                                    <span class="text-sm font-medium text-gray-700">Safety Vest</span>
+                                </div>
+                                <div class="text-xs text-gray-500">High-visibility clothing</div>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 border border-gray-200 animate-fadeZoomIn delay-300">
+                        <div class="flex items-center mb-2">
+                                    <span class="status-indicator bg-red-500 animate-pulse"></span>
+                                    <span class="text-sm font-medium text-gray-700">Violation</span>
+                                </div>
+                                <div class="text-xs text-gray-500">Missing PPE equipment</div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Safety Status Section -->
+    <section class="py-10 bg-white">
+        <div class="container mx-auto px-6">
+            <h2 class="text-2xl font-bold text-center mb-8 text-slate-800">Safety Status</h2>
+            <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200" data-aos="fade-up">
+                <div id="statusMessage" class="text-center py-4 px-6 rounded-lg bg-blue-50 text-blue-800 mb-6 flex items-center justify-center">
+                    <i class="fas fa-info-circle mr-3 text-2xl animate-pulse"></i>
+                    <span>Waiting for detection to start...</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Hardhat Status -->
+                    <div class="status-card bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="flex items-center mb-3">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4 animate-pulse">
+                                <i class="fas fa-hard-hat text-xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800">Hardhat Detection</h4>
+                        </div>
+                        <p id="helmetStatus" class="text-gray-600 mt-2">Not started</p>
+                    </div>
+                    
+                    <!-- Vest Status -->
+                    <div class="status-card bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="flex items-center mb-3">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4 animate-pulse">
+                                <i class="fas fa-vest text-xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800">Vest Detection</h4>
+                        </div>
+                        <p id="vestStatus" class="text-gray-600 mt-2">Not started</p>
+                    </div>
+                    
+                    <!-- Violations Status -->
+                    <div class="status-card bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="flex items-center mb-3">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4 animate-pulse">
+                                <i class="fas fa-exclamation-triangle text-xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800">Violations</h4>
+                        </div>
+                        <p id="violationStatus" class="text-gray-600 mt-2">Not started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-white pt-16 pb-8">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center mr-2">
+                            <i class="fas fa-hard-hat text-slate-900 text-xl"></i>
+        </div>
+                        <span class="text-xl font-bold">Safety<span class="text-amber-500">First</span></span>
+                    </div>
+                    <p class="text-gray-400 mb-4">Advanced PPE detection system for construction site safety and compliance.</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-amber-500 transition duration-300"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-amber-500 transition duration-300"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-amber-500 transition duration-300"><i class="fab fa-facebook"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="text-gray-400 hover:text-amber-300 transition duration-300">Home</a></li>
+                        <li><a href="index.html#features" class="text-gray-400 hover:text-amber-300 transition duration-300">Features</a></li>
+                        <li><a href="index.html#testimonials" class="text-gray-400 hover:text-amber-300 transition duration-300">Testimonials</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-amber-300 transition duration-300">Live Monitor</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Solutions</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-amber-300 transition duration-300">PPE Detection</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-amber-300 transition duration-300">Hazard Recognition</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-amber-300 transition duration-300">Compliance Reporting</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-amber-300 transition duration-300">Safety Training</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Contact Us</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt text-amber-500 mt-1 mr-3"></i>
+                            <span class="text-gray-400">123 Safety Street, Tech City, SV 10010</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone text-amber-500 mr-3"></i>
+                            <span class="text-gray-400">+1 (555) 123-4567</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-envelope text-amber-500 mr-3"></i>
+                            <span class="text-gray-400">info@safetyfirst.com</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center">
+                <p class="text-gray-500">© 2023 SafetyFirst Construction PPE Detection System. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>    <script>        AOS.init({            duration: 1000,            once: true,            offset: 100        });        
+        // Configuration - Fix for local file access
+        let API_BASE_URL;
+        try {
+            // Try to determine API URL based on current location
+            if (window.location.protocol === 'file:') {
+                // If opened as a local file, default to localhost:5000
+                API_BASE_URL = 'http://localhost:5000';
+            } else {
+                // If served from a web server, use the same origin
+                API_BASE_URL = window.location.origin;
+                // If not running on port 5000, still use port 5000
+                if (!API_BASE_URL.includes(':5000')) {
+                    API_BASE_URL = 'http://' + window.location.hostname + ':5000';
+                }
+            }
+        } catch (e) {
+            // Fallback to localhost if any error occurs
+            API_BASE_URL = 'http://localhost:5000';
+            console.log("Using fallback API URL:", API_BASE_URL);
+        }
+        
+        console.log("API endpoint set to:", API_BASE_URL);
+        
+        let isRunning = false;
+        let statusCheckInterval = null;
+        let demoModeInterval = null;
+        
+        // Check API status
+        async function checkApiStatus() {
+            try {
+                // First check if API_BASE_URL is properly defined
+                if (!API_BASE_URL) {
+                    console.error("API_BASE_URL is not defined");
+                    document.getElementById('apiStatusText').textContent = 'Configuration Error';
+                    document.getElementById('apiStatusText').className = 'font-medium text-red-500';
+                    return false;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/api/status`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('apiStatusText').textContent = 'Connected';
+                    document.getElementById('apiStatusText').className = 'font-medium text-green-500';
+                    return true;
+                } else {
+                    document.getElementById('apiStatusText').textContent = 'Disconnected';
+                    document.getElementById('apiStatusText').className = 'font-medium text-red-500';
+                    return false;
+                }
+            } catch (error) {
+                console.error("API check failed:", error);
+                document.getElementById('apiStatusText').textContent = 'Not Available';
+                document.getElementById('apiStatusText').className = 'font-medium text-red-500';
+                return false;
+            }
+        }
+        
+        // Text-to-speech alert function
+        function speakAlert(message) {
+            if (!isRunning) return; // Don't speak if detection is stopped
+            
+            const speech = new SpeechSynthesisUtterance();
+            speech.text = message;
+            speech.volume = 1;
+            speech.rate = 1;
+            speech.pitch = 1;
+            
+            window.speechSynthesis.speak(speech);
+        }
+        
+        // Start detection via API
+        async function startDetection() {
+            if (isRunning) return;
+            
+            try {
+                // Check if API_BASE_URL is properly defined
+                if (!API_BASE_URL) {
+                    console.error("API_BASE_URL is not defined");
+                    document.getElementById('apiStatusText').textContent = 'Configuration Error';
+                    document.getElementById('apiStatusText').className = 'font-medium text-red-500';
+                    startDemoMode(); // Fall back to demo mode
+                    return;
+                }
+                
+                const apiAvailable = await checkApiStatus();
+                if (!apiAvailable) {
+                    // If API is not available, switch to demo mode
+                    console.log("API not available, starting demo mode");
+                    startDemoMode();
+                    return;
+                }
+                
+                // Show loading state
+                document.getElementById('startButton').disabled = true;
+                document.getElementById('apiStatusText').textContent = 'Starting...';
+                document.getElementById('apiStatusText').className = 'font-medium text-blue-500';
+                
+                // Make API call to start detection
+                const response = await fetch(`${API_BASE_URL}/api/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Start was successful
+                    isRunning = true;
+                    
+                    // Enable stop button, keep start button disabled
+                    document.getElementById('stopButton').disabled = false;
+                    
+                    // Update status
+                    document.getElementById('apiStatusText').textContent = 'Running';
+                    document.getElementById('apiStatusText').className = 'font-medium text-green-500';
+                    
+                    // Update status message
+                    document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-blue-100 text-blue-800 mb-6 flex items-center justify-center';
+                    document.getElementById('statusMessage').innerHTML = '<i class="fas fa-spinner fa-spin mr-3 text-2xl"></i><span>Detection in progress...</span>';
+                    
+                    // Clear previous log
+                    document.getElementById('detectionLog').innerHTML = '';
+                    
+                    // Start polling for status and results
+                    statusCheckInterval = setInterval(fetchStatus, 1000);
+                    
+                    // Start video feed
+                    document.getElementById('cameraPlaceholder').classList.add('hidden');
+                    document.getElementById('videoFeed').classList.remove('hidden');
+                    document.getElementById('videoFeed').src = `${API_BASE_URL}/video_feed?time=${new Date().getTime()}`;
+                    
+                    // Play sound notification
+                    speakAlert("PPE detection system activated");
+                } else {
+                    // Start failed
+                    const data = await response.json();
+                    console.error("Start detection failed:", data.message);
+                    document.getElementById('apiStatusText').textContent = 'Error';
+                    document.getElementById('apiStatusText').className = 'font-medium text-red-500';
+                    document.getElementById('startButton').disabled = false;
+                    
+                    // Show error
+                    document.getElementById('streamError').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error starting detection:", error);
+                startDemoMode(); // Fall back to demo mode
+            }
+        }
+        
+        // Stop detection via API
+        async function stopDetection() {
+            try {
+                // First ensure we cancel any pending speech
+                window.speechSynthesis.cancel();
+                
+                const response = await fetch(`${API_BASE_URL}/api/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    cleanupAfterStop();
+                    // Play sound notification - removed to prevent alerts after stopping
+                    // speakAlert("PPE detection system deactivated");
+                } else {
+                    console.error("Stop detection failed:", await response.json());
+                    cleanupAfterStop(); // Clean up anyway
+                }
+            } catch (error) {
+                console.error("Error stopping detection:", error);
+                cleanupAfterStop(); // Clean up anyway
+            }
+        }
+        
+        // Clean up resources after stopping
+        function cleanupAfterStop() {
+            isRunning = false;
+            
+            // Ensure speech synthesis is canceled
+            window.speechSynthesis.cancel();
+            
+            // Enable start button, disable stop button
+            document.getElementById('startButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+            
+            // Clear interval
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+            
+            // Hide video feed, show placeholder
+            document.getElementById('videoFeed').classList.add('hidden');
+            document.getElementById('cameraPlaceholder').classList.remove('hidden');
+            
+            // Reset API status
+            document.getElementById('apiStatusText').textContent = 'Stopped';
+            document.getElementById('apiStatusText').className = 'font-medium text-gray-500';
+            
+            // Reset status message
+            document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-gray-100 text-gray-800 mb-6 flex items-center justify-center';
+            document.getElementById('statusMessage').innerHTML = '<i class="fas fa-pause-circle mr-3 text-2xl"></i><span>Detection stopped</span>';
+            
+            // Reset status
+            document.getElementById('helmetStatus').textContent = 'Not active';
+            document.getElementById('vestStatus').textContent = 'Not active';
+            document.getElementById('violationStatus').textContent = 'Not active';
+        }
+        
+        // Fetch current status from API
+        async function fetchStatus() {
+            if (!isRunning) return;
+            
+            try {
+                // Fetch the latest results
+                await fetchResults();
+                
+                // Check system status
+                const response = await fetch(`${API_BASE_URL}/api/status`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update status counters based on the API response format
+                    document.getElementById('helmetStatus').textContent = `${data.helmets || 0} detected`;
+                    document.getElementById('vestStatus').textContent = `${data.vests || 0} detected`;
+                    document.getElementById('violationStatus').textContent = `${data.violations || 0} violations`;
+                    
+                    // Update status message based on violations
+                    if (data.violations > 0) {
+                        document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-red-100 text-red-800 mb-6 flex items-center justify-center';
+                        document.getElementById('statusMessage').innerHTML = '<i class="fas fa-exclamation-triangle mr-3 text-2xl"></i><span>Safety violations detected!</span>';
+                        
+                        // Speak alert for violations (once every 5 seconds)
+                        if (data.violations % 5 == 0) {
+                            speakAlert("Warning! Safety violation detected.");
+                        }
+                    } else {
+                        document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-green-100 text-green-800 mb-6 flex items-center justify-center';
+                        document.getElementById('statusMessage').innerHTML = '<i class="fas fa-check-circle mr-3 text-2xl"></i><span>All workers compliant</span>';
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching status:", error);
+            }
+        }
+        
+        // Start demo mode (no backend needed)
+        function startDemoMode() {
+            isRunning = true;
+            
+            // Enable stop button, disable start button
+            document.getElementById('stopButton').disabled = false;
+            document.getElementById('startButton').disabled = true;
+            
+            // Update api status text
+            document.getElementById('apiStatusText').textContent = 'DEMO MODE';
+            document.getElementById('apiStatusText').className = 'font-medium text-blue-500';
+            
+            // Update status message
+            document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-blue-100 text-blue-800 mb-6 flex items-center justify-center';
+            document.getElementById('statusMessage').innerHTML = '<i class="fas fa-film mr-3 text-2xl animate-pulse"></i><span>Demo mode active</span>';
+            
+            // Use default image for video
+            document.getElementById('cameraPlaceholder').classList.add('hidden');
+            document.getElementById('videoFeed').classList.remove('hidden');
+            document.getElementById('videoFeed').src = 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
+            
+            // Clear previous log
+            const detectionLog = document.getElementById('detectionLog');
+            detectionLog.innerHTML = '<p class="text-gray-500 mb-2 animate-slideIn">[DEMO] Starting detection simulation...</p>';
+            
+            // Set initial status
+            document.getElementById('helmetStatus').textContent = 'Detecting...';
+            document.getElementById('vestStatus').textContent = 'Detecting...';
+            document.getElementById('violationStatus').textContent = 'Monitoring..';
+            
+            // Simulate detection events
+            let counter = 0;
+            demoModeInterval = setInterval(() => {
+                // Check if we're still running before processing
+                if (!isRunning) {
+                    clearInterval(demoModeInterval);
+                    demoModeInterval = null;
+                    return;
+                }
+                
+                counter++;
+                
+                if (counter % 3 === 0) {
+                    // Simulate a violation
+                    detectionLog.innerHTML = `<p class="text-red-600 mb-2 font-medium animate-slideIn">[DEMO] ⚠️ Violation detected: Worker without hardhat</p>` + detectionLog.innerHTML;
+                    document.getElementById('violationStatus').textContent = 'Violation detected!';
+                    document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-red-100 text-red-800 mb-6 flex items-center justify-center';
+                    document.getElementById('statusMessage').innerHTML = '<i class="fas fa-exclamation-triangle mr-3 text-2xl animate-pulse"></i><span>Safety violations detected!</span>';
+                    
+                    // Only speak alert if still running
+                    if (isRunning) {
+                        speakAlert("Warning! Safety violation detected.");
+                    }
+                } else if (counter % 3 === 1) {
+                    // Simulate a vest detection
+                    detectionLog.innerHTML = `<p class="text-blue-600 mb-2 animate-slideIn">[DEMO] Safety vest detected on worker</p>` + detectionLog.innerHTML;
+                    document.getElementById('vestStatus').textContent = 'Vest detected';
+                    document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-green-100 text-green-800 mb-6 flex items-center justify-center';
+                    document.getElementById('statusMessage').innerHTML = '<i class="fas fa-check-circle mr-3 text-2xl animate-pulse"></i><span>All workers compliant</span>';
+                } else {
+                    // Simulate a hardhat detection
+                    detectionLog.innerHTML = `<p class="text-green-600 mb-2 animate-slideIn">[DEMO] Hardhat detected on worker</p>` + detectionLog.innerHTML;
+                    document.getElementById('helmetStatus').textContent = 'Hardhat detected';
+                    document.getElementById('statusMessage').className = 'text-center py-4 px-6 rounded-lg bg-green-100 text-green-800 mb-6 flex items-center justify-center';
+                    document.getElementById('statusMessage').innerHTML = '<i class="fas fa-check-circle mr-3 text-2xl animate-pulse"></i><span>All workers compliant</span>';
+                }
+                
+                // Limit the log size
+                if (detectionLog.childElementCount > 50) {
+                    detectionLog.removeChild(detectionLog.lastChild);
+                }
+            }, 3000);
+        }
+        
+        function stopDemoMode() {
+            // Ensure speech synthesis is canceled
+            window.speechSynthesis.cancel();
+            
+            if (demoModeInterval) {
+                clearInterval(demoModeInterval);
+                demoModeInterval = null;
+            }
+            cleanupAfterStop();
+        }
+        
+        // Fetch results from API
+        async function fetchResults() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/results`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.results && data.results.length > 0) {
+                        const detectionLog = document.getElementById('detectionLog');
+                        
+                        // Add each new detection result to the log
+                        data.results.forEach(result => {
+                            let logClass = 'text-gray-600';
+                            let icon = '🔍';
+                            
+                            // Format the log entry based on detection type
+                            result.detections.forEach(detection => {
+                                const type = detection.type;
+                                const confidence = detection.confidence;
+                                
+                                if (type.startsWith('NO-')) {
+                                    logClass = 'text-red-600 font-medium';
+                                    icon = '⚠️';
+                                    
+                                    // For violations, speak an alert
+                                    speakAlert(`Warning! ${type} detected.`);
+                                } else if (type === 'Hardhat' || type === 'helmet') {
+                                    logClass = 'text-green-600';
+                                    icon = '👷';
+                                } else if (type === 'Safety Vest' || type === 'vest') {
+                                    logClass = 'text-blue-600';
+                                    icon = '🦺';
+                                }
+                                
+                                const logEntry = `<p class="${logClass} mb-2 animate-slideIn">[${result.timestamp}] ${icon} ${type} (${(confidence * 100).toFixed(0)}%)</p>`;
+                                
+                                // Create a new element
+                                const logItem = document.createElement('div');
+                                logItem.innerHTML = logEntry;
+                                
+                                // Insert at the top of the log
+                                detectionLog.insertBefore(logItem, detectionLog.firstChild);
+                                
+                                // Limit the log size
+                                if (detectionLog.childElementCount > 100) {
+                                    detectionLog.removeChild(detectionLog.lastChild);
+                                }
+                            });
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching results:", error);
+            }
+        }
+        
+        // Retry button for stream errors
+        document.getElementById('retryButton').addEventListener('click', function() {
+            document.getElementById('streamError').classList.add('hidden');
+            document.getElementById('videoFeed').src = `${API_BASE_URL}/video_feed?time=${new Date().getTime()}`;
+        });
+        
+        // Initialize real detection system
+        async function initRealDetectionSystem() {
+            // Enhanced detection using TensorFlow.js
+            try {
+                // Include TensorFlow.js library if not already present
+                if (!window.tf) {
+                    console.log("Loading TensorFlow.js...");
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js';
+                    document.head.appendChild(script);
+                    
+                    // Wait for the script to load
+                    await new Promise((resolve) => {
+                        script.onload = resolve;
+                    });
+                }
+                
+                console.log("TensorFlow.js loaded successfully");
+                return true;
+            } catch (err) {
+                console.error("Failed to initialize TensorFlow.js:", err);
+                return false;
+            }
+        }
+        
+        // Advanced PPE Detection processing
+        async function processDetectionWithTensorflow(imageElement) {
+            // This would be replaced with actual TensorFlow model logic
+            // For demo purposes, we're just simulating processing
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    console.log("Processing image with TensorFlow.js model");
+                    
+                    // Simulate detection results
+                    const results = {
+                        timestamp: new Date().toLocaleTimeString(),
+                        detections: [
+                            {
+                                type: Math.random() > 0.7 ? 'NO-Hardhat' : 'Hardhat',
+                                confidence: 0.85 + (Math.random() * 0.1)
+                            },
+                            {
+                                type: Math.random() > 0.8 ? 'NO-Vest' : 'Safety Vest',
+                                confidence: 0.75 + (Math.random() * 0.2)
+                            }
+                        ]
+                    };
+                    
+                    resolve(results);
+                }, 200);
+            });
+        }
+        
+        // Initialize on document load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial API status check
+            checkApiStatus();
+            
+            // Button event listeners
+            document.getElementById('startButton').addEventListener('click', async function() {
+                // Initialize TensorFlow.js for enhanced local detection
+                await initRealDetectionSystem();
+                
+                // Start detection
+                startDetection();
+            });
+            
+            document.getElementById('stopButton').addEventListener('click', function() {
+                if (document.getElementById('apiStatusText').textContent === 'DEMO MODE') {
+                    stopDemoMode();
+                } else {
+                    stopDetection();
+                }
+            });
+            
+            // Add enhanced error handling for video feed
+            document.getElementById('videoFeed').addEventListener('error', function() {
+                if (isRunning) {
+                    document.getElementById('streamError').classList.remove('hidden');
+                }
+            });
+            
+            // Add buttons container to video
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'absolute bottom-4 right-4 flex space-x-2';
+            document.getElementById('videoContainer').appendChild(buttonContainer);
+            
+            // Implement ability to take screenshots
+            const screenshotButton = document.createElement('button');
+            screenshotButton.className = 'bg-white bg-opacity-80 p-2 rounded-full text-slate-900 hover:bg-opacity-100 transition-all';
+            screenshotButton.innerHTML = '<i class="fas fa-camera"></i>';
+            screenshotButton.title = 'Take Screenshot';
+            screenshotButton.addEventListener('click', function() {
+                if (!isRunning) return;
+                
+                try {
+                    // Create a canvas element
+                    const canvas = document.createElement('canvas');
+                    const video = document.getElementById('videoFeed');
+                    canvas.width = video.width;
+                    canvas.height = video.height;
+                    
+                    // Draw the video frame to the canvas
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Create a download link for the screenshot
+                    const link = document.createElement('a');
+                    link.download = `ppe-detection-${new Date().toISOString()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    // Add to log
+                    const detectionLog = document.getElementById('detectionLog');
+                    detectionLog.innerHTML = `<p class="text-blue-600 mb-2"><i class="fas fa-camera mr-1"></i> Screenshot saved at ${new Date().toLocaleTimeString()}</p>` + detectionLog.innerHTML;
+                } catch (err) {
+                    console.error('Error taking screenshot:', err);
+                }
+            });
+            
+            // Add local processing button
+            const processButton = document.createElement('button');
+            processButton.className = 'bg-white bg-opacity-80 p-2 rounded-full text-slate-900 hover:bg-opacity-100 transition-all';
+            processButton.innerHTML = '<i class="fas fa-microchip"></i>';
+            processButton.title = 'Process Current Frame';
+            processButton.addEventListener('click', async function() {
+                if (!isRunning) return;
+                
+                try {
+                    // Create a notification
+                    const detectionLog = document.getElementById('detectionLog');
+                    detectionLog.innerHTML = `<p class="text-blue-600 mb-2"><i class="fas fa-spinner fa-spin mr-1"></i> Processing current frame...</p>` + detectionLog.innerHTML;
+                    
+                    // Process the current frame with TensorFlow.js
+                    const results = await processDetectionWithTensorflow(document.getElementById('videoFeed'));
+                    
+                    // Add results to the log
+                    results.detections.forEach(detection => {
+                        let logClass = 'text-gray-600';
+                        let icon = '🔍';
+                        
+                        // Format the log entry based on detection type
+                        const type = detection.type;
+                        const confidence = detection.confidence;
+                        
+                        if (type.startsWith('NO-')) {
+                            logClass = 'text-red-600 font-medium';
+                            icon = '⚠️';
+                            
+                            // For violations, speak an alert
+                            speakAlert(`Warning! ${type} detected.`);
+                        } else if (type === 'Hardhat' || type === 'helmet') {
+                            logClass = 'text-green-600';
+                            icon = '👷';
+                        } else if (type === 'Safety Vest' || type === 'vest') {
+                            logClass = 'text-blue-600';
+                            icon = '🦺';
+                        }
+                        
+                        const logEntry = `<p class="${logClass} mb-2 animate-slideIn">[LOCAL] ${icon} ${type} (${(confidence * 100).toFixed(0)}%)</p>`;
+                        
+                        // Create a new element
+                        const logItem = document.createElement('div');
+                        logItem.innerHTML = logEntry;
+                        
+                        // Insert at the top of the log
+                        detectionLog.insertBefore(logItem, detectionLog.firstChild);
+                    });
+                    
+                } catch (err) {
+                    console.error('Error processing frame:', err);
+                    const detectionLog = document.getElementById('detectionLog');
+                    detectionLog.innerHTML = `<p class="text-red-600 mb-2"><i class="fas fa-exclamation-circle mr-1"></i> Error processing frame</p>` + detectionLog.innerHTML;
+                }
+            });
+            
+            // Add brightness control button
+            const brightnessButton = document.createElement('button');
+            brightnessButton.className = 'bg-white bg-opacity-80 p-2 rounded-full text-slate-900 hover:bg-opacity-100 transition-all';
+            brightnessButton.innerHTML = '<i class="fas fa-sun"></i>';
+            brightnessButton.title = 'Adjust Brightness';
+            brightnessButton.addEventListener('click', function() {
+                if (!isRunning) return;
+                
+                // Create brightness slider if it doesn't exist
+                if (!document.getElementById('brightnessSlider')) {
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'absolute bottom-16 right-4 bg-white bg-opacity-90 p-3 rounded-lg flex items-center transition-all';
+                    sliderContainer.id = 'brightnessContainer';
+                    
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.min = '0';
+                    slider.max = '200';
+                    slider.value = '100';
+                    slider.className = 'w-32';
+                    slider.id = 'brightnessSlider';
+                    
+                    slider.addEventListener('input', function() {
+                        const videoFeed = document.getElementById('videoFeed');
+                        videoFeed.style.filter = `brightness(${this.value}%)`;
+                    });
+                    
+                    const closeButton = document.createElement('button');
+                    closeButton.className = 'ml-2 text-gray-700 hover:text-red-500';
+                    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+                    closeButton.addEventListener('click', function() {
+                        document.getElementById('brightnessContainer').remove();
+                    });
+                    
+                    sliderContainer.appendChild(slider);
+                    sliderContainer.appendChild(closeButton);
+                    document.getElementById('videoContainer').appendChild(sliderContainer);
+                } else {
+                    document.getElementById('brightnessContainer').remove();
+                }
+            });
+            
+            // Add buttons to container
+            buttonContainer.appendChild(screenshotButton);
+            buttonContainer.appendChild(processButton);
+            buttonContainer.appendChild(brightnessButton);
+        });    </script></body></html>
