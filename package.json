@@ -1,0 +1,18 @@
+{
+  "name": "construction-ppe-detection",
+  "version": "1.0.0",
+  "description": "A real-time safety monitoring system for construction sites",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "construction",
+    "safety",
+    "ppe",
+    "detection",
+    "yolov8"
+  ],
+  "author": "",
+  "license": "MIT"
+}

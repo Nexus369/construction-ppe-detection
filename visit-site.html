@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="js/main.js"></script>
+    <script src="js/camera.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -185,7 +187,8 @@
                                 <p class="text-lg text-gray-300">Camera feed will appear here</p>
                             </div>
                         </div>
-                        <img id="videoFeed" class="w-full h-96 object-cover hidden" src="" alt="Video Feed">
+                        <video id="videoFeed" class="w-full h-96 object-cover hidden" autoplay playsinline></video>
+                        <canvas id="videoCanvas" class="w-full h-96 object-cover hidden absolute top-0 left-0"></canvas>
                         <div id="streamError" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
                             <div class="text-center p-4 animate-fadeZoomIn">
                                 <i class="fas fa-exclamation-circle text-5xl text-red-500 mb-3 animate-pulse"></i>
@@ -221,7 +224,7 @@
                         <h3 class="text-xl font-bold text-white">Detection Log</h3>
                     </div>
                     <div class="p-6">
-                        <div id="detectionLog" class="bg-gray-50 rounded-lg p-4 h-80 overflow-y-auto text-left border border-gray-200">
+                        <div id="detection-results" class="bg-gray-50 rounded-lg p-4 h-80 overflow-y-auto text-left border border-gray-200">
                             <p class="text-gray-500">Detection logs will appear here...</p>
                         </div>
                         <div class="mt-5 grid grid-cols-3 gap-4">
@@ -985,4 +988,58 @@
             buttonContainer.appendChild(screenshotButton);
             buttonContainer.appendChild(processButton);
             buttonContainer.appendChild(brightnessButton);
-        });    </script></body></html>
+        });
+        
+        // Initialize Camera Feed
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const videoFeed = document.getElementById('videoFeed');
+            const videoCanvas = document.getElementById('videoCanvas');
+            const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const apiStatusText = document.getElementById('apiStatusText');
+            const streamError = document.getElementById('streamError');
+            const retryButton = document.getElementById('retryButton');
+            
+            // Initialize camera feed
+            let cameraFeed = null;
+            
+            // Button event listeners
+            startButton.addEventListener('click', async function() {
+                if (!cameraFeed) {
+                    cameraFeed = new CameraFeed(videoFeed, videoCanvas, apiStatusText);
+                }
+                
+                const success = await cameraFeed.start();
+                if (success) {
+                    cameraPlaceholder.classList.add('hidden');
+                    videoFeed.classList.remove('hidden');
+                    videoCanvas.classList.remove('hidden');
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                } else {
+                    streamError.classList.remove('hidden');
+                }
+            });
+            
+            stopButton.addEventListener('click', function() {
+                if (cameraFeed) {
+                    cameraFeed.stop();
+                    cameraPlaceholder.classList.remove('hidden');
+                    videoFeed.classList.add('hidden');
+                    videoCanvas.classList.add('hidden');
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                }
+            });
+            
+            retryButton.addEventListener('click', function() {
+                streamError.classList.add('hidden');
+                startButton.click();
+            });
+            
+            // Disable stop button initially
+            stopButton.disabled = true;
+        });
+    </script></body></html>
