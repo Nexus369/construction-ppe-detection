@@ -47,6 +47,13 @@ class handler(BaseHTTPRequestHandler):
             
             self.wfile.write(json.dumps(mock_detection_results).encode())
             return
+            
+        elif self.path.startswith('/video_feed') or self.path.startswith('/api/video_feed'):
+            self.send_response(302)
+            self.send_header('Location', 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=600&q=80')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            return
         
         # Default response for other paths
         self.send_response(404)
