@@ -1,0 +1,9 @@
+*.py
+requirements.txt
+best.pt
+Dockerfile
+render.yaml
+README.md
+VERCEL_DEPLOYMENT.md
+output/
+__pycache__/
