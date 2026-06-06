@@ -7,7 +7,7 @@ mock_detection_results = []
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/api/status':
+        if self.path.startswith('/api/status'):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -25,7 +25,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
             return
         
-        elif self.path == '/api/results':
+        elif self.path.startswith('/api/results'):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -55,10 +55,9 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({"error": "Not found"}).encode())
     
     def do_POST(self):
-        if self.path == '/api/upload':
+        if self.path.startswith('/api/upload') or self.path.startswith('/api/socket'):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
             
             # Here you would process the uploaded image
             # For demo purposes, we'll just return a mock response
@@ -70,6 +69,8 @@ class handler(BaseHTTPRequestHandler):
             
             response = {
                 "success": True,
+                "processed": True,
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
                 "message": "Image processed successfully",
                 "detections": [
                     {"type": "helmet", "detected": True, "confidence": 0.95},
@@ -78,6 +79,22 @@ class handler(BaseHTTPRequestHandler):
             }
             
             self.wfile.write(json.dumps(response).encode())
+            return
+            
+        elif self.path.startswith('/api/start'):
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Detection started"}).encode())
+            return
+            
+        elif self.path.startswith('/api/stop'):
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Detection stopped"}).encode())
             return
         
         # Default response for other paths
