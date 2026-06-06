@@ -7,7 +7,7 @@ class CameraFeed {
         this.statusElement = statusElement;
         this.streaming = false;
         this.ctx = this.canvas.getContext('2d');
-        this.apiBaseUrl = window.location.origin;
+        this.apiBaseUrl = 'https://nexus3-ppe-detection-backend.hf.space';
         this.processingFrame = false;
         this.frameInterval = 500; // Send a frame every 500ms
         this.intervalId = null;

@@ -42,7 +42,7 @@ function connectToBackend() {
     console.log('Connecting to PPE detection serverless backend');
     
     // API base URL - will be the Vercel deployment URL in production
-    const apiBaseUrl = window.location.origin;
+    const apiBaseUrl = 'https://nexus3-ppe-detection-backend.hf.space';
     
     return {
         startDetection: function() {
