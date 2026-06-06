@@ -82,6 +82,12 @@ class CameraFeed {
         
         this.processingFrame = true;
         
+        // Ensure canvas has valid dimensions
+        if (!this.canvas.width || this.canvas.width === 0) {
+            this.canvas.width = 640;
+            this.canvas.height = 480;
+        }
+        
         // Draw current video frame to canvas
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
         
