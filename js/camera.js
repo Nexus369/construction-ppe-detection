@@ -91,9 +91,10 @@ class CameraFeed {
         // Send frame to server
         this.sendFrameToServer(frameData)
             .then(result => {
-                if (result && result.processed) {
-                    this.updateDetectionResults(result);
-                }
+                // UI updates are handled by the main polling loop in visit-site.html
+                // if (result && result.processed) {
+                //     this.updateDetectionResults(result);
+                // }
             })
             .catch(error => {
                 console.error('Error sending frame:', error);

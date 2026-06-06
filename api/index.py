@@ -45,7 +45,8 @@ class handler(BaseHTTPRequestHandler):
             if len(mock_detection_results) > 50:
                 mock_detection_results.pop(0)
             
-            self.wfile.write(json.dumps(mock_detection_results).encode())
+            response_data = {"results": mock_detection_results}
+            self.wfile.write(json.dumps(response_data).encode())
             return
             
         elif self.path.startswith('/video_feed') or self.path.startswith('/api/video_feed'):

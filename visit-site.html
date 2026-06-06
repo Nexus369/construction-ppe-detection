@@ -103,7 +103,8 @@
                                 <p class="text-lg text-gray-300">Camera feed will appear here</p>
                             </div>
                         </div>
-                        <img id="videoFeed" class="w-full h-full object-cover hidden">
+                        <video id="videoFeed" class="w-full h-full object-cover hidden" autoplay playsinline></video>
+                        <canvas id="captureCanvas" class="hidden"></canvas>
                         <div id="streamError" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
                             <div class="text-center p-4">
                                 <i class="fas fa-exclamation-circle text-5xl text-red-500 mb-3 animate-pulse"></i>
@@ -174,6 +175,7 @@
     </footer>
 
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="js/camera.js"></script>
     <script>
         AOS.init();
         
@@ -205,6 +207,8 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(msg));
         }
 
+        let cameraFeedInstance = null;
+        
         async function start() {
             if (isRunning) return;
             const ok = await checkStatus();
@@ -219,7 +223,14 @@
                     document.getElementById('cameraPlaceholder').classList.add('hidden');
                     const feed = document.getElementById('videoFeed');
                     feed.classList.remove('hidden');
-                    feed.src = `${API_BASE_URL}/video_feed?t=${Date.now()}`;
+                    
+                    if (!cameraFeedInstance) {
+                        const canvas = document.getElementById('captureCanvas');
+                        const statusElement = document.getElementById('apiStatusText');
+                        cameraFeedInstance = new CameraFeed(feed, canvas, statusElement);
+                        cameraFeedInstance.apiBaseUrl = API_BASE_URL;
+                    }
+                    await cameraFeedInstance.start();
                     
                     detectionLog.innerHTML = '';
                     pollInterval = setInterval(update, 1000);
@@ -234,12 +245,13 @@
             clearInterval(demoInterval);
             window.speechSynthesis.cancel();
             
+            if (cameraFeedInstance) cameraFeedInstance.stop();
+            
             try { await fetch(`${API_BASE_URL}/api/stop`, { method: 'POST' }); } catch (e) {}
             
             document.getElementById('startButton').disabled = false;
             document.getElementById('stopButton').disabled = true;
             document.getElementById('videoFeed').classList.add('hidden');
-            document.getElementById('videoFeed').src = '';
             document.getElementById('cameraPlaceholder').classList.remove('hidden');
             document.getElementById('statusMessage').textContent = 'Detection stopped';
         }
