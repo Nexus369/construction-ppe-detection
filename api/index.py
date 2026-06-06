@@ -18,6 +18,7 @@ class handler(BaseHTTPRequestHandler):
                 "detection_active": True,
                 "helmet_count": 5,
                 "vest_count": 4,
+                "glove_count": 0,
                 "violation_count": 1
             }
             

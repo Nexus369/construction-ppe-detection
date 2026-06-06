@@ -20,6 +20,7 @@ detection_results = []
 violation_count = 0
 helmet_count = 0
 vest_count = 0
+glove_count = 0
 
 def init_camera():
     """Initialize the camera"""
@@ -28,7 +29,8 @@ def init_camera():
         # Try different camera indices (0, 1, 2) in sequence
         for camera_idx in [0, 1, 2]:
             print(f"Attempting to open camera at index {camera_idx}")
-            camera = cv2.VideoCapture(camera_idx)
+            # Use DirectShow backend on Windows to avoid MSMF errors
+            camera = cv2.VideoCapture(camera_idx, cv2.CAP_DSHOW)
             if camera.isOpened():
                 # Successfully opened camera
                 print(f"Successfully opened camera at index {camera_idx}")
@@ -37,7 +39,19 @@ def init_camera():
                 camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 camera.set(cv2.CAP_PROP_FPS, 30)
-                return True
+                
+                # Give the camera a moment to stabilize
+                time.sleep(1.0)
+                
+                # Check if we can actually read a frame
+                success, frame = camera.read()
+                if success:
+                    print(f"Successfully opened and read from camera at index {camera_idx}")
+                    return True
+                else:
+                    print(f"Opened camera at index {camera_idx} but could not read frame")
+                    camera.release()
+                    continue
         
         print("Error: Could not open any camera")
         return False
@@ -99,11 +113,12 @@ def detection_thread():
             
             # Process frame with the model
             fps_start = cv2.getTickCount()
-            processed_frame = process_frame(frame, model, fps_start)
+            processed_frame, detections = process_frame(frame, model, fps_start)
             
             if processed_frame is not None:
-                # Extract detection results from the model
-                results = extract_detection_results(model, frame)
+                # Create results object
+                timestamp = time.strftime("%H:%M:%S")
+                results = {"timestamp": timestamp, "detections": detections}
                 
                 # Update counters based on detection
                 update_counters(results)
@@ -124,41 +139,33 @@ def detection_thread():
         # Sleep a bit to avoid excessive CPU usage
         time.sleep(0.03)
 
-def extract_detection_results(model, frame):
-    """Extract detection results from the model (mock implementation)"""
-    # In a real implementation, this would extract actual results from the YOLOv8 model
-    # For demo purposes, we're generating mock results
-    results = model(frame, conf=0.25, iou=0.45, verbose=False)
-    
-    detections = []
-    for result in results:
-        boxes = result.boxes
-        for box in boxes:
-            cls = int(box.cls[0])
-            conf = float(box.conf[0])
-            class_name = result.names[cls]
-            
-            detections.append({
-                "type": class_name,
-                "detected": True,  # Since it was detected
-                "confidence": conf
-            })
-    
-    timestamp = time.strftime("%H:%M:%S")
-    return {"timestamp": timestamp, "detections": detections}
 
 def update_counters(results):
     """Update detection counters based on results"""
-    global violation_count, helmet_count, vest_count
+    global violation_count, helmet_count, vest_count, glove_count
+    
+    # Reset counters for the current frame
+    current_violation_count = 0
+    current_helmet_count = 0
+    current_vest_count = 0
+    current_glove_count = 0
     
     for detection in results.get("detections", []):
         type_name = detection.get("type", "")
         if type_name.startswith("NO-") and detection.get("detected", False):
-            violation_count += 1
+            current_violation_count += 1
         elif (type_name == "Hardhat" or type_name == "helmet") and detection.get("detected", False):
-            helmet_count += 1
+            current_helmet_count += 1
         elif (type_name == "Safety Vest" or type_name == "vest") and detection.get("detected", False):
-            vest_count += 1
+            current_vest_count += 1
+        elif (type_name == "Gloves" or type_name == "hand gloves") and detection.get("detected", False):
+            current_glove_count += 1
+            
+    # Update global counters
+    violation_count = current_violation_count
+    helmet_count = current_helmet_count
+    vest_count = current_vest_count
+    glove_count = current_glove_count
 
 def generate_frames():
     """Generate frames for video streaming"""
@@ -255,13 +262,14 @@ def stop_detection():
 @app.route("/api/status")
 def get_status():
     """Get detection status and counters"""
-    global detection_active, violation_count, helmet_count, vest_count
+    global detection_active, violation_count, helmet_count, vest_count, glove_count
     
     return jsonify({
         "active": detection_active,
         "violations": violation_count,
         "helmets": helmet_count,
-        "vests": vest_count
+        "vests": vest_count,
+        "gloves": glove_count
     })
 
 @app.route("/api/results")

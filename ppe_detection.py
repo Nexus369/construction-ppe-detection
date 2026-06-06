@@ -40,10 +40,12 @@ def load_model():
 def process_frame(frame, model, fps_start):
     """Process a single frame and draw detections with optimized performance"""
     if frame is None or model is None:
-        return None
+        return None, []
     
     # Perform detection with optimized settings
     results = model(frame, conf=0.25, iou=0.45, verbose=False)
+    
+    detections = []
     
     # Process results
     for result in results:
@@ -59,11 +61,20 @@ def process_frame(frame, model, fps_start):
             # Get class name
             class_name = result.names[cls]
             
+            # Store detection for API
+            detections.append({
+                "type": class_name,
+                "detected": True,
+                "confidence": conf
+            })
+            
             # Color coding based on class and confidence
             if class_name == 'Hardhat' or class_name == 'helmet':
                 color = (0, 255, 0)  # Green for helmet
             elif class_name == 'Safety Vest' or class_name == 'vest':
                 color = (0, 165, 255)  # Orange for vest
+            elif class_name == 'Gloves' or class_name == 'hand gloves':
+                color = (255, 0, 255)  # Magenta for gloves
             elif class_name.startswith('NO-'):
                 color = (0, 0, 255)  # Red for violations
             else:
@@ -77,10 +88,11 @@ def process_frame(frame, model, fps_start):
             cv2.putText(frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     
     # Add FPS counter
-    fps = cv2.getTickFrequency() / (cv2.getTickCount() - fps_start)
-    cv2.putText(frame, f'FPS: {fps:.1f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    if fps_start > 0:
+        fps = cv2.getTickFrequency() / (cv2.getTickCount() - fps_start)
+        cv2.putText(frame, f'FPS: {fps:.1f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     
-    return frame
+    return frame, detections
 
 def process_image(image_path, model):
     """Process a single image"""
@@ -91,7 +103,7 @@ def process_image(image_path, model):
         return
     
     # Process the image
-    processed_image = process_frame(image, model, 0)
+    processed_image, detections = process_frame(image, model, 0)
     if processed_image is None:
         return
     
@@ -104,7 +116,7 @@ def process_video(video_path, model):
     """Process a video file or camera stream"""
     # Open video capture
     if video_path == 0:  # Use webcam
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     else:  # Use video file
         cap = cv2.VideoCapture(video_path)
     
@@ -129,7 +141,7 @@ def process_video(video_path, model):
             break
         
         # Process frame
-        processed_frame = process_frame(frame, model, 0)
+        processed_frame, detections = process_frame(frame, model, 0)
         if processed_frame is None:
             break
         
@@ -161,11 +173,11 @@ def main():
         return
     
     print("Initializing webcam...")
-    # Try the default camera first
-    cap = cv2.VideoCapture(0)
+    # Try the default camera first with DirectShow backend
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     if not cap.isOpened():
         print("Error: Could not open default camera. Trying external camera...")
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         if not cap.isOpened():
             print("Error: Could not open any camera. Exiting...")
             return
@@ -185,7 +197,7 @@ def main():
             break
         
         # Process frame
-        processed_frame = process_frame(frame, model, fps_start)
+        processed_frame, detections = process_frame(frame, model, fps_start)
         if processed_frame is None:
             break
         

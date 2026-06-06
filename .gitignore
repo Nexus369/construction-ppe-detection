@@ -38,6 +38,9 @@ desktop.ini
 
 # Large model files
 best.pt
+yolov8n.pt
+PPE Gloves.v1i.yolov8*
+runs/
 
 # Local development files
 __pycache__/
