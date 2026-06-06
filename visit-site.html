@@ -104,6 +104,7 @@
                             </div>
                         </div>
                         <video id="videoFeed" class="w-full h-full object-cover hidden" autoplay playsinline></video>
+                        <canvas id="overlayCanvas" class="w-full h-full object-cover hidden absolute top-0 left-0 pointer-events-none"></canvas>
                         <canvas id="captureCanvas" class="hidden"></canvas>
                         <div id="streamError" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
                             <div class="text-center p-4">
@@ -221,6 +222,7 @@
                     document.getElementById('cameraPlaceholder').classList.add('hidden');
                     const feed = document.getElementById('videoFeed');
                     feed.classList.remove('hidden');
+                    document.getElementById('overlayCanvas').classList.remove('hidden');
                     
                     if (!cameraFeedInstance) {
                         const canvas = document.getElementById('captureCanvas');

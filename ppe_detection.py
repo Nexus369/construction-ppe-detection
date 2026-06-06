@@ -65,7 +65,8 @@ def process_frame(frame, model, fps_start):
             detections.append({
                 "type": class_name,
                 "detected": True,
-                "confidence": conf
+                "confidence": conf,
+                "box": [x1, y1, x2, y2]
             })
             
             # Color coding based on class and confidence

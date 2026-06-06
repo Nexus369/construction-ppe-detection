@@ -11,6 +11,10 @@ class CameraFeed {
         this.processingFrame = false;
         this.frameInterval = 500; // Send a frame every 500ms
         this.intervalId = null;
+        this.overlayCanvas = document.getElementById('overlayCanvas');
+        if (this.overlayCanvas) {
+            this.overlayCtx = this.overlayCanvas.getContext('2d');
+        }
     }
 
     async start() {
@@ -34,6 +38,10 @@ class CameraFeed {
             this.video.addEventListener('loadedmetadata', () => {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
+                if (this.overlayCanvas) {
+                    this.overlayCanvas.width = this.video.videoWidth;
+                    this.overlayCanvas.height = this.video.videoHeight;
+                }
             });
             
             // Start sending frames
@@ -59,6 +67,10 @@ class CameraFeed {
             if (this.intervalId) {
                 clearInterval(this.intervalId);
                 this.intervalId = null;
+            }
+            
+            if (this.overlayCtx) {
+                this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
             }
             
             this.updateStatus('Camera stopped');
@@ -97,10 +109,9 @@ class CameraFeed {
         // Send frame to server
         this.sendFrameToServer(frameData)
             .then(result => {
-                // UI updates are handled by the main polling loop in visit-site.html
-                // if (result && result.processed) {
-                //     this.updateDetectionResults(result);
-                // }
+                if (result && result.processed && result.detections) {
+                    this.drawBoundingBoxes(result.detections);
+                }
             })
             .catch(error => {
                 console.error('Error sending frame:', error);
@@ -108,6 +119,44 @@ class CameraFeed {
             .finally(() => {
                 this.processingFrame = false;
             });
+    }
+
+    drawBoundingBoxes(detections) {
+        if (!this.overlayCtx || !this.overlayCanvas) return;
+        
+        // Clear previous drawings
+        this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        
+        detections.forEach(det => {
+            if (!det.box) return;
+            
+            const [x1, y1, x2, y2] = det.box;
+            const width = x2 - x1;
+            const height = y2 - y1;
+            
+            // Determine color
+            let color = '#FFFF00'; // Yellow
+            if (det.type === 'Hardhat' || det.type === 'helmet') color = '#00FF00';
+            else if (det.type === 'Safety Vest' || det.type === 'vest') color = '#FFA500';
+            else if (det.type === 'Gloves' || det.type === 'hand gloves') color = '#FF00FF';
+            else if (det.type.startsWith('NO-')) color = '#FF0000';
+            
+            // Draw box
+            this.overlayCtx.strokeStyle = color;
+            this.overlayCtx.lineWidth = 4;
+            this.overlayCtx.strokeRect(x1, y1, width, height);
+            
+            // Draw label background
+            this.overlayCtx.fillStyle = color;
+            const text = `${det.type} ${Math.round(det.confidence * 100)}%`;
+            this.overlayCtx.font = '16px Arial';
+            const textWidth = this.overlayCtx.measureText(text).width;
+            this.overlayCtx.fillRect(x1, y1 - 24, textWidth + 10, 24);
+            
+            // Draw text
+            this.overlayCtx.fillStyle = '#000000';
+            this.overlayCtx.fillText(text, x1 + 5, y1 - 6);
+        });
     }
 
     async sendFrameToServer(frameData) {
