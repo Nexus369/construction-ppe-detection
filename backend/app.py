@@ -1,0 +1,196 @@
+import os
+
+from dotenv import load_dotenv
+from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
+
+load_dotenv()
+
+from config import Config, check_deployment, check_secrets
+from extensions import db, jwt, limiter
+
+# At import, not inside __main__: production runs under gunicorn, which
+# imports this module and never executes that block — so a check placed
+# there would pass silently in the one environment it exists to protect.
+check_secrets()
+check_deployment()
+
+
+def _promote_configured_admins(app):
+    """Give ADMIN_EMAILS accounts admin rights at every start.
+
+    Runs on boot as well as at sign-up so the two can happen in either
+    order: set the variable and then sign up, or sign up and then set the
+    variable and restart. Only ever promotes - it never demotes an admin
+    who was granted rights some other way, because a typo in an
+    environment variable should not lock a site out of its own console.
+    """
+    from models import User
+
+    wanted = app.config.get("ADMIN_EMAILS") or set()
+    if not wanted:
+        return
+
+    promoted = []
+    for user in User.query.filter(User.is_admin.is_(False)).all():
+        if (user.email or "").strip().lower() in wanted:
+            user.is_admin = True
+            promoted.append(user.email)
+    if promoted:
+        db.session.commit()
+        print("Granted admin to: " + ", ".join(promoted), flush=True)
+
+
+def _add_missing_columns():
+    """Add columns introduced after a database was first created.
+
+    db.create_all() builds missing *tables* but never alters existing ones,
+    so a deployment that predates a new column starts up fine and then
+    fails on first query. There's no migration tool here, and adding one
+    for a handful of nullable columns would be heavier than the problem.
+
+    Only ever adds nullable columns — nothing here rewrites or drops data.
+    """
+    from sqlalchemy import inspect, text
+
+    additions = {
+        "detection_records": {
+            "policy_json": "TEXT",
+            "evidence_file": "VARCHAR(120)",
+        },
+        "safety_notices": {
+            "revoked_at": "DATETIME",
+            "outcome": "VARCHAR(16)",
+        },
+        # notice_deliveries is a new table, so create_all() handles it.
+    }
+
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table, columns in additions.items():
+        if table not in existing_tables:
+            continue
+        present = {c["name"] for c in inspector.get_columns(table)}
+        for name, ddl in columns.items():
+            if name in present:
+                continue
+            try:
+                db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app_logger = __import__("logging").getLogger(__name__)
+                app_logger.exception("Could not add column %s.%s", table, name)
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    db.init_app(app)
+    jwt.init_app(app)
+    limiter.init_app(app)
+    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}}, supports_credentials=True)
+
+    # Only when a deployment says how many proxies sit in front of it.
+    # Without this the limiter sees the proxy's address for every caller,
+    # so one recipient refreshing their notice exhausts the allowance of
+    # everyone else's.
+    hops = app.config.get("TRUSTED_PROXY_HOPS", 0)
+    if hops > 0:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops,
+                                x_host=hops, x_prefix=hops)
+
+    from admin import admin_bp
+    from auth import auth_bp
+    from cctv import cctv_bp
+    from detection import detection_bp
+    from gate import gate_bp
+    from notices import notices_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(detection_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(gate_bp)
+    app.register_blueprint(cctv_bp)
+    app.register_blueprint(notices_bp)
+
+    with app.app_context():
+        db.create_all()
+        _add_missing_columns()
+        _promote_configured_admins(app)
+
+    # Serve the console from the API when they are deployed together.
+    #
+    # In development they are two servers (backend on :5000, frontend on
+    # :8000) because a static server that never caches makes CSS edits
+    # visible immediately. A hosted deployment is one container with one
+    # public URL, so the API serves the pages too — and then the console
+    # needs no API address at all, because it is the same origin.
+    #
+    # Absent (a backend-only image), every path below still falls through
+    # to the JSON identity response, so nothing breaks by omitting it.
+    FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    has_frontend = os.path.isdir(FRONTEND_DIR)
+
+    @app.route("/")
+    def index():
+        if has_frontend:
+            return send_from_directory(FRONTEND_DIR, "index.html")
+        return jsonify({"status": "ok", "service": "PPE Detection API"})
+
+    if has_frontend:
+        @app.route("/<path:filename>")
+        def frontend_file(filename):
+            """Static console files, by name only.
+
+            Registered after every blueprint, so /api/* is already claimed
+            and cannot be shadowed by a file of the same name. Unknown
+            paths return the JSON identity rather than index.html: this is
+            not a single-page app, and silently answering 200 with a page
+            for a mistyped API path is how a client ends up parsing HTML
+            as JSON and reporting something incomprehensible.
+            """
+            candidate = os.path.join(FRONTEND_DIR, filename)
+            if os.path.isfile(candidate):
+                # send_from_directory rejects traversal itself; this is
+                # only deciding whether we have the file at all.
+                return send_from_directory(FRONTEND_DIR, filename)
+            return jsonify({"status": "ok", "service": "PPE Detection API"}), 404
+
+    @app.route("/api/health")
+    def health():
+        """Unauthenticated liveness check.
+
+        Lives under /api/ deliberately: CORS is only configured for that
+        prefix, so a browser on the frontend origin can actually read this.
+        The kiosk device uses it to show whether the service is up before
+        anyone tries to start a checkpoint.
+        """
+        return jsonify({"status": "ok", "service": "PPE Detection API"})
+
+    @jwt.unauthorized_loader
+    def handle_missing_token(reason):
+        return jsonify({"success": False, "message": "Authentication required"}), 401
+
+    @jwt.invalid_token_loader
+    def handle_invalid_token(reason):
+        return jsonify({"success": False, "message": "Invalid or expired token"}), 401
+
+    @app.errorhandler(429)
+    def handle_rate_limit(e):
+        # Matches the {success, message} shape every other error response
+        # uses — Flask-Limiter's default is plain text, which would be the
+        # one endpoint on this API that looks different when it fails.
+        return jsonify({"success": False, "message": "Too many requests — slow down and try again shortly."}), 429
+
+    return app
+
+
+app = create_app()
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

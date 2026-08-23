@@ -1,0 +1,279 @@
+import os
+from datetime import timedelta
+
+
+def _database_uri():
+    """Resolve the database URL, normalising managed-Postgres quirks.
+
+    Render/Heroku hand out URLs beginning with "postgres://", a scheme
+    SQLAlchemy 1.4+ dropped in favour of "postgresql://". Left as-is it
+    fails at startup with "Can't load plugin: sqlalchemy.dialects:postgres".
+
+    Falls back to local SQLite for development. Note that SQLite on an
+    ephemeral container filesystem (Render, HF Spaces) is wiped on every
+    restart — set DATABASE_URL to a managed Postgres instance in production
+    or the compliance record will not survive a redeploy.
+    """
+    url = os.environ.get("DATABASE_URL", "sqlite:///app.db")
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
+DEV_SECRET_KEY = "dev-secret-change-me"
+DEV_JWT_SECRET_KEY = "dev-jwt-secret-change-me"
+
+# Set by the platform itself, not by us. Their presence is the most reliable
+# "this is deployed, not somebody's laptop" signal available without asking
+# the deployer to remember another setting — which is exactly the thing that
+# gets forgotten and causes this problem in the first place.
+HOST_MARKERS = (
+    "RENDER",               # Render
+    "SPACE_ID",             # Hugging Face Spaces
+    "DYNO",                 # Heroku
+    "FLY_APP_NAME",         # Fly.io
+    "RAILWAY_ENVIRONMENT",  # Railway
+    "K_SERVICE",            # Google Cloud Run
+    "WEBSITE_INSTANCE_ID",  # Azure App Service
+)
+
+
+def _looks_deployed():
+    return any(os.environ.get(marker) for marker in HOST_MARKERS)
+
+
+def check_secrets():
+    """Refuse to serve traffic with the placeholder signing keys.
+
+    JWTs are signed with JWT_SECRET_KEY. The fallback below is a literal in
+    this file, so a deployment that never set the real one signs tokens with
+    a value anybody reading the repository already knows — and a forged token
+    is indistinguishable from a real one, including an admin's. That is not a
+    slow leak; it is account takeover from a published string.
+
+    Local development keeps the convenient defaults and only warns, because
+    the failure mode there is nobody's problem. Anything running on a known
+    host raises instead: better a container that refuses to start than one
+    that starts wide open and looks perfectly healthy.
+    """
+    weak = []
+    if os.environ.get("SECRET_KEY", DEV_SECRET_KEY) == DEV_SECRET_KEY:
+        weak.append("SECRET_KEY")
+    if os.environ.get("JWT_SECRET_KEY", DEV_JWT_SECRET_KEY) == DEV_JWT_SECRET_KEY:
+        weak.append("JWT_SECRET_KEY")
+    if not weak:
+        return
+
+    names = " and ".join(weak)
+    if _looks_deployed():
+        raise RuntimeError(
+            f"Refusing to start: {names} still set to the development default, "
+            "which is published in this repository's config.py — anyone could "
+            "forge an admin token. Generate one per variable with "
+            '`python -c "import secrets; print(secrets.token_urlsafe(48))"` '
+            "and set it in the host's environment settings."
+        )
+    print(
+        f"WARNING: {names} using the development default. Fine locally; this "
+        "will refuse to start once deployed. See .env.example.",
+        flush=True,
+    )
+
+
+def check_deployment():
+    """Warn about settings that are wrong specifically once hosted.
+
+    Warnings rather than refusals: unlike a default signing key, none of
+    these let anyone in. They break the app for the people who are
+    supposed to be using it, which is quieter and therefore easier to
+    deploy without noticing.
+    """
+    if not _looks_deployed():
+        return
+
+    notes = []
+    if int(os.environ.get("TRUSTED_PROXY_HOPS", "0")) == 0:
+        notes.append(
+            "TRUSTED_PROXY_HOPS is 0, but every managed host puts a proxy in "
+            "front of this app. Every request therefore arrives from the same "
+            "address, so the rate limiter counts the whole internet as one "
+            "caller and legitimate users lock each other out - the public "
+            "notice pages first, since the limiter is their only protection. "
+            "Set it to the number of proxies in front of this app (1 on "
+            "Render, Hugging Face Spaces, Fly, or behind a single nginx). Do "
+            "not set it higher than the real count: each extra hop is one "
+            "more address a caller can forge."
+        )
+    if not os.environ.get("PUBLIC_BASE_URL", "").strip():
+        notes.append(
+            "PUBLIC_BASE_URL is unset, so safety notices cannot be emailed - "
+            "a relative link is useless in an inbox. The console still hands "
+            "officers the link to send by hand. Set it to this service's "
+            "public origin to enable sending."
+        )
+
+    for note in notes:
+        print("WARNING: " + note, flush=True)
+
+
+class Config:
+    SECRET_KEY = os.environ.get("SECRET_KEY", DEV_SECRET_KEY)
+
+    SQLALCHEMY_DATABASE_URI = _database_uri()
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Managed Postgres drops idle connections; pre-ping avoids handing the
+    # app a dead one, and recycling keeps connections under that timeout.
+    SQLALCHEMY_ENGINE_OPTIONS = (
+        {"pool_pre_ping": True, "pool_recycle": 280}
+        if SQLALCHEMY_DATABASE_URI.startswith("postgresql")
+        else {}
+    )
+
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", DEV_JWT_SECRET_KEY)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
+
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
+    # Where refusal evidence frames are written. Kept on disk rather than in
+    # the database: these are ~50KB JPEGs written on every refusal, and
+    # storing them as BLOBs bloats the backups that exist to protect the
+    # decision record itself. Same ephemeral-filesystem caveat as SQLite —
+    # point EVIDENCE_DIR at a mounted volume in production or the images
+    # vanish on redeploy while the records that reference them survive.
+    EVIDENCE_DIR = os.environ.get(
+        "EVIDENCE_DIR",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance", "evidence"),
+    )
+
+    # Refusal images are personal data — someone's face, tied to a name and a
+    # timestamp. They age out on a timer so the system isn't quietly building
+    # a permanent photographic record of every worker's bad day. The decision
+    # itself is kept; only the image expires.
+    EVIDENCE_RETENTION_DAYS = int(os.environ.get("EVIDENCE_RETENTION_DAYS", "30"))
+
+    # Number of reverse proxies in front of this app whose X-Forwarded-For
+    # can be believed. Zero by default, and that default is the safe one:
+    # trusting the header when nothing sets it lets any caller name
+    # themselves whatever they like and walk straight through the rate
+    # limits meant to hold them.
+    #
+    # It matters most for the notice routes, which are the only ones with
+    # no login behind them - there, the limiter is the whole defence.
+    # Behind one proxy (a Cloudflare tunnel, a single nginx) this is 1;
+    # measured with it at 0, twenty-four callers on distinct addresses
+    # shared a single bucket and locked each other out.
+    TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS", "0"))
+
+    # Where this deployment answers from, used to build the absolute link
+    # in a notice email. A relative path is fine in a page the browser
+    # already loaded and useless in an inbox, so without this the server
+    # cannot compose an email worth sending and says so rather than
+    # sending a broken one.
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+
+    # Outbound mail. All blank by default, in which case notices are still
+    # issued and the console hands the officer the link to send themselves
+    # - a site without a mail server should not lose the feature, only the
+    # automation.
+    SMTP_HOST = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USER = os.environ.get("SMTP_USER", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_FROM = os.environ.get("SMTP_FROM", "")
+    SMTP_STARTTLS = os.environ.get("SMTP_STARTTLS", "1") not in ("0", "false", "False")
+
+    # Comma-separated list of allowed frontend origins for CORS.
+    CORS_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+        if origin.strip()
+    ]
+
+    # Emails that get administrator rights, comma separated.
+    #
+    # Admin used to be grantable only by make_admin.py, which needs a shell
+    # inside the deployment. A managed host does not give you one, so a
+    # freshly deployed site had no route to its own console: the first
+    # person signed up, got an ordinary account, and nothing could ever
+    # promote it. This is the bootstrap - it names who is trusted before
+    # anyone has signed up, which is the only order that works remotely.
+    #
+    # Matching is on the verified account email, and being listed is
+    # checked at sign-up and at every start, so the order of "set the
+    # variable" and "create the account" does not matter.
+    ADMIN_EMAILS = {
+        email.strip().lower()
+        for email in os.environ.get("ADMIN_EMAILS", "").split(",")
+        if email.strip()
+    }
+
+    # Base URL of the site CCTV camera (esp32-main/cctv_cam), e.g.
+    # http://safetyfirst-cam.local or http://192.168.1.50 — no trailing
+    # path. Blank means no camera, and the console says so rather than
+    # showing a broken image.
+    #
+    # The backend connects *to* this address, so it must be reachable from
+    # the machine running this process — the same LAN as the camera. A
+    # tunnel does not help here: it exposes the backend outward, which is
+    # the opposite direction.
+    CCTV_URL = os.environ.get("CCTV_URL", "")
+
+    # Shared secret a camera sends as X-Device-Token to post its own
+    # frames, for when the gate device that normally relays them is off.
+    # Blank (the default) refuses the header outright, so the fallback
+    # stays off until someone opts in — same convention as the Pi's
+    # SAFETYFIRST_LOCAL_ALERT_TOKEN, and for the same reason: a device
+    # endpoint that runs open is a way in.
+    #
+    # This token can do exactly one thing, replace a camera's picture. It
+    # is deliberately not a login: a real session on a board that sits on
+    # an open LAN would be worth far more if anyone pulled it off the
+    # flash.
+    CCTV_UPLOAD_TOKEN = os.environ.get("CCTV_UPLOAD_TOKEN", "")
+
+    # Spoken gate announcements. Blank key means "not configured" — the
+    # frontend falls back to the browser's own (robotic) speechSynthesis
+    # rather than the gate breaking when nobody's set this up yet.
+    ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+    # Default is "Rachel", one of ElevenLabs' stock premade voices — any
+    # voice_id from their library or a cloned voice works here.
+    ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+
+    # Cached synthesized audio, one file per distinct phrase. The gate
+    # speaks maybe half a dozen distinct sentences ever — "Access granted."
+    # fires on every clean pass — so paying ElevenLabs and waiting on the
+    # network for the same sentence repeatedly would be pure waste.
+    SPEECH_CACHE_DIR = os.environ.get(
+        "SPEECH_CACHE_DIR",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance", "speech"),
+    )
+
+    # In-app help chatbot. Same "blank means not configured" convention as
+    # ElevenLabs above — the widget just tells the user it's unavailable
+    # rather than the page breaking when nobody's set this up yet. Free tier
+    # via Google AI Studio (aistudio.google.com), no card required.
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    # An alias, not a pinned version — gemini-2.0-flash (the original
+    # default here) was retired server-side and every request started
+    # 404ing with no code change on our end. -latest always resolves to
+    # whatever Google currently recommends, trading a small chance of
+    # behavior drift for not silently breaking again the same way.
+    #
+    # ...and specifically the *lite* alias, because the free tier's daily
+    # request cap is per-model (quota id
+    # GenerateRequestsPerDayPerProjectPerModel-FreeTier), and the flagship
+    # alias gets the smallest allowance of the lot — 20 requests/day, which
+    # a single afternoon of testing exhausts. Lite is a smaller model, but
+    # this is answering "which page is that setting on", not reasoning over
+    # the codebase; the quota headroom is worth far more here than the
+    # capability difference.
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
+
+    # Fallback provider, tried only when Gemini reports its quota gone.
+    # Both free tiers have daily caps and running dry mid-demo is the
+    # failure that actually matters — two independent providers are
+    # unlikely to be exhausted at the same moment. Blank is fine; the
+    # chain just has one link then. Free key: console.groq.com
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+    GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")

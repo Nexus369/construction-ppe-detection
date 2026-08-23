@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyFirst — Nobody should have to remember</title>
+    <meta name="description" content="A construction site checkpoint that confirms protective equipment before anyone steps on site, and answers in about a second.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+
+    <!-- The console's stylesheet, not a copy of it. Every token below comes
+         from here, so this page follows the rest of the product instead of
+         drifting away from it the next time app.css changes. -->
+    <link rel="stylesheet" href="css/app.css?v=20260807a">
+
+    <style>
+        /* Page-specific composition only. Colour, type, radius, shadow and
+           easing all come from app.css. */
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-body);
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap {
+            width: min(1080px, calc(100% - 48px));
+            margin-inline: auto;
+        }
+
+        /* -- masthead ------------------------------------------------- */
+
+        .masthead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 22px 0;
+        }
+
+        .mark {
+            font-family: var(--font-head);
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--ink);
+            text-decoration: none;
+        }
+
+        .masthead nav {
+            display: flex;
+            align-items: center;
+            gap: 26px;
+        }
+
+        .masthead nav a:not(.btn) {
+            font-size: .92rem;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color var(--dur-fast) var(--ease-out);
+        }
+
+        .masthead nav a:not(.btn):hover { color: var(--ink); }
+
+        /* app.css styles .btn for <button>; as an <a> it still inherits the
+           default underline, which reads as a mistake on a pill. */
+        a.btn { text-decoration: none; white-space: nowrap; }
+
+        /* Below this the three nav items crush together - "How it works"
+           was wrapping onto three lines and the button onto two. The links
+           are all reachable from the page itself, so drop them and keep
+           the one action. */
+        @media (max-width: 640px) {
+            .masthead nav a:not(.btn) { display: none; }
+        }
+
+        /* -- hero ----------------------------------------------------- */
+
+        .hero {
+            padding: clamp(56px, 10vw, 120px) 0 clamp(48px, 8vw, 96px);
+        }
+
+        .hero h1 {
+            font-family: var(--font-head);
+            font-weight: 600;
+            font-size: clamp(2.5rem, 6.4vw, 4.4rem);
+            line-height: 1.02;
+            letter-spacing: -0.035em;
+            margin: 0;
+            max-width: 15ch;
+            text-wrap: balance;
+        }
+
+        .hero p {
+            margin: 26px 0 0;
+            font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+            line-height: 1.62;
+            color: var(--muted);
+            max-width: 54ch;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 36px;
+        }
+
+        /* -- the one image, doing real work --------------------------- */
+
+        .plate {
+            position: relative;
+            /* <figure> carries a UA default of margin: 1em 40px, which was
+               insetting the image 40px on both sides at every width. */
+            margin: clamp(44px, 7vw, 76px) 0 0;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--surface-alt);
+            box-shadow: var(--shadow);
+        }
+
+        .plate img {
+            display: block;
+            width: 100%;
+            height: clamp(260px, 42vw, 460px);
+            object-fit: cover;
+        }
+
+        .verdict {
+            position: absolute;
+            left: clamp(16px, 3vw, 28px);
+            bottom: clamp(16px, 3vw, 28px);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px 10px 13px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            font-size: .9rem;
+            font-weight: 500;
+        }
+
+        .verdict::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ok);
+        }
+
+        /* -- sections ------------------------------------------------- */
+
+        section + section { border-top: 1px solid var(--border); }
+
+        .band { padding: clamp(56px, 9vw, 104px) 0; }
+
+        h2 {
+            font-family: var(--font-head);
+            font-weight: 600;
+            font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+            line-height: 1.14;
+            letter-spacing: -0.025em;
+            margin: 0 0 14px;
+            max-width: 20ch;
+            text-wrap: balance;
+        }
+
+        .lede {
+            margin: 0;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.65;
+            max-width: 56ch;
+        }
+
+        /* The gate flow. Ordered because the order is the point, but the
+           reader gets that from the sequence — numbering it as well would
+           be saying it twice. */
+        .flow {
+            list-style: none;
+            counter-reset: none;
+            margin: clamp(36px, 5vw, 56px) 0 0;
+            padding: 0;
+            display: grid;
+            gap: clamp(28px, 4vw, 44px);
+            /* Three, because there are three steps. auto-fit was laying out
+               four tracks and leaving one empty. */
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 760px) {
+            .flow { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .flow h3 {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 8px;
+            padding-top: 16px;
+            border-top: 2px solid var(--ink);
+        }
+
+        .flow p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .95rem;
+            line-height: 1.62;
+        }
+
+        /* Running kit. A description list, because that is what it is. */
+        .kit {
+            margin: clamp(32px, 4vw, 48px) 0 0;
+            display: grid;
+            gap: 0;
+            /* Two, so four items make two even rows rather than three with
+               one stranded. */
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 700px) {
+            .kit { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .kit div {
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .kit dt {
+            font-weight: 600;
+            font-size: .95rem;
+            margin-bottom: 5px;
+        }
+
+        .kit dd {
+            margin: 0;
+            color: var(--muted);
+            font-size: .92rem;
+            line-height: 1.6;
+        }
+
+        @media (min-width: 700px) {
+            .kit { column-gap: 40px; }
+        }
+
+        /* -- close ---------------------------------------------------- */
+
+        .close { text-align: center; }
+        .close h2 { margin-inline: auto; }
+        .close .lede { margin-inline: auto; }
+        .close .actions { justify-content: center; }
+
+        footer {
+            padding: 32px 0 44px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 22px;
+            align-items: center;
+            justify-content: space-between;
+            /* --faint measures 3.03:1 on --bg, which fails for text this
+               size. --muted is 6.85:1 and still recedes. */
+            color: var(--muted);
+            font-size: .86rem;
+        }
+
+        footer a {
+            color: var(--muted);
+            text-decoration: none;
+        }
+
+        footer a:hover { color: var(--ink); }
+
+        /* -- the one authored moment ---------------------------------- */
+
+        @media (prefers-reduced-motion: no-preference) {
+            .rise {
+                animation: rise 900ms var(--ease-out) both;
+            }
+            .rise:nth-child(2) { animation-delay: 70ms; }
+            .rise:nth-child(3) { animation-delay: 140ms; }
+
+            @keyframes rise {
+                from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+                to   { opacity: 1; transform: none; filter: none; }
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header class="wrap masthead">
+    <a href="index.html" class="mark">SafetyFirst</a>
+    <nav>
+        <a href="#gate">How it works</a>
+        <a href="visit-site.html">Checkpoint</a>
+        <a href="login.html" class="btn btn-primary btn-sm">Sign in</a>
+    </nav>
+</header>
+
+<main>
+
+    <section class="wrap hero">
+        <h1 class="rise">Nobody should have to remember to check.</h1>
+        <p class="rise">
+            A worker arrives at the gate. Before they step onto the site, a camera
+            confirms they are wearing what the job requires — and the gate answers
+            in about a second.
+        </p>
+        <div class="actions rise">
+            <a href="visit-site.html" class="btn btn-primary">See it run</a>
+            <a href="#gate" class="btn btn-outline">How it works</a>
+        </div>
+
+        <figure class="plate rise">
+            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1400&q=80"
+                 alt="Construction workers wearing hardhats and high-visibility vests on site">
+            <figcaption class="verdict">Hardhat &amp; vest confirmed</figcaption>
+        </figure>
+    </section>
+
+    <section id="gate" class="wrap band">
+        <h2>Three seconds at the gate</h2>
+        <p class="lede">
+            No new habits to learn, no forms, nothing to remember. A worker does
+            what they already do: turn up.
+        </p>
+
+        <ol class="flow">
+            <li>
+                <h3>They badge in</h3>
+                <p>A card touch identifies who is at the gate. The screen greets them by name — not an ID number.</p>
+            </li>
+            <li>
+                <h3>The camera looks</h3>
+                <p>A vision model checks for a hardhat and a high-visibility vest, and holds the answer for a moment to be sure.</p>
+            </li>
+            <li>
+                <h3>The gate answers</h3>
+                <p>Cleared, and they are marked present. Missing something, and the screen names it so they can fix it and scan again.</p>
+            </li>
+        </ol>
+    </section>
+
+    <section class="wrap band">
+        <h2>It runs on the gate, not on a promise</h2>
+        <p class="lede">
+            The checkpoint decides on the hardware standing at the entrance. If the
+            network goes, it keeps deciding, and files what it owes when the link
+            returns.
+        </p>
+
+        <dl class="kit">
+            <div>
+                <dt>Decides on the device</dt>
+                <dd>The model runs on the Raspberry Pi at the gate. No server in the loop, no round trip to wait on.</dd>
+            </div>
+            <div>
+                <dt>Keeps its own roster</dt>
+                <dd>Names, badges and the site's PPE policy are held locally, so a severed link costs a queue to drain — not a decision.</dd>
+            </div>
+            <div>
+                <dt>Sensors that join no network</dt>
+                <dd>Gas and temperature nodes reach the gate directly over ESP-NOW, and the gate carries them the rest of the way.</dd>
+            </div>
+            <div>
+                <dt>Refusals keep their evidence</dt>
+                <dd>Every refusal stores the frame that caused it, with the policy that was in force at that moment.</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="wrap band close">
+        <h2>Try it with your own camera</h2>
+        <p class="lede">
+            The checkpoint runs in a browser. Stand in front of a webcam and it will
+            tell you what you are missing.
+        </p>
+        <div class="actions">
+            <a href="visit-site.html" class="btn btn-primary">Open the checkpoint</a>
+            <a href="login.html" class="btn btn-outline">Sign in to the console</a>
+        </div>
+    </section>
+
+</main>
+
+<footer class="wrap">
+    <span>SafetyFirst — Team Mojito</span>
+    <span>
+        <a href="index-full.html">The full story</a>
+    </span>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Raspberry Pi checkpoint app.
+#
+# Deliberately light: inference happens on the backend, so torch and
+# ultralytics are NOT needed here. This installs in a couple of minutes on a
+# Pi instead of the best part of an hour.
+#
+# opencv-python-headless is correct even though this app has a GUI — the
+# window is drawn by tkinter, and OpenCV is only used for camera capture and
+# drawing onto frames. The headless build skips the GUI stack (imshow etc.)
+# and is considerably smaller.
+opencv-python-headless
+Pillow
+requests
+python-dotenv
+
+# Required, not optional: the gate master ESP32 arrives over USB and carries
+# badges, hazard alerts and fan telemetry. Without pyserial the Pi cannot see
+# any USB device at all, so badge scanning silently falls back to a keyboard
+# and the gate looks like it simply does not read cards.
+pyserial
+
+# Only needed for a plain NMEA module (a NEO-6M and friends). The Quectel
+# TracX-1b this project owns answers AT commands and is parsed without it,
+# so a checkpoint using that module does not need this line.
+# pynmea2

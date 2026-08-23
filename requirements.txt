@@ -1,8 +1,13 @@
-flask>=2.0.1
+flask>=2.3
 flask-cors
+flask-sqlalchemy
+flask-jwt-extended
+flask-limiter
+psycopg2-binary
+google-auth
+requests
 gunicorn
 numpy>=1.26.0
 opencv-python-headless
-python-dateutil>=2.8.2
-pytz>=2021.1
 ultralytics
+python-dotenv
