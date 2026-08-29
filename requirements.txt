@@ -10,4 +10,5 @@ gunicorn
 numpy>=1.26.0
 opencv-python-headless
 ultralytics
+onnxruntime
 python-dotenv

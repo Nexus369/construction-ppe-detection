@@ -4,7 +4,16 @@ import cv2
 import torch
 from ultralytics import YOLO
 
-MODEL_PATH = os.environ.get("MODEL_PATH", os.path.join(os.path.dirname(__file__), "..", "best.pt"))
+def _resolve_model_path():
+    if "MODEL_PATH" in os.environ:
+        return os.environ["MODEL_PATH"]
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    onnx_candidate = os.path.join(base_dir, "best.onnx")
+    if os.path.isfile(onnx_candidate):
+        return onnx_candidate
+    return os.path.join(base_dir, "best.pt")
+
+MODEL_PATH = _resolve_model_path()
 
 VIOLATION_PREFIX = "NO-"
 HELMET_CLASSES = {"Hardhat", "helmet"}
@@ -21,12 +30,11 @@ BOX_COLORS = {
 
 
 def load_model():
-    """Load the YOLOv8 PPE detection model.
+    """Load the YOLOv8 PPE detection model (ONNX or PyTorch)."""
+    model_path = _resolve_model_path()
+    if model_path.endswith(".onnx"):
+        return YOLO(model_path, task="detect")
 
-    PyTorch >=2.6 defaults torch.load(weights_only=True), which rejects the
-    pickled Ultralytics checkpoint. We only trust our own best.pt, so we
-    scope weights_only=False to this single load call rather than globally.
-    """
     original_torch_load = torch.load
 
     def patched_torch_load(*args, **kwargs):
@@ -35,7 +43,7 @@ def load_model():
 
     torch.load = patched_torch_load
     try:
-        model = YOLO(MODEL_PATH)
+        model = YOLO(model_path, task="detect")
     finally:
         torch.load = original_torch_load
 
