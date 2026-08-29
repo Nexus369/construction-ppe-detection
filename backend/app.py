@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 
 load_dotenv()
@@ -91,7 +91,28 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     limiter.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}}, supports_credentials=True)
+    cors_origins = list(set(app.config["CORS_ORIGINS"] + [r"https://.*\.vercel\.app"]))
+    CORS(
+        app,
+        resources={r"/api/*": {
+            "origins": cors_origins,
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+            "expose_headers": ["Content-Type", "Authorization"],
+            "max_age": 86400,
+        }},
+        supports_credentials=True,
+    )
+
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get("Origin")
+        if origin and request.path.startswith("/api"):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+        return response
 
     # Only when a deployment says how many proxies sit in front of it.
     # Without this the limiter sees the proxy's address for every caller,

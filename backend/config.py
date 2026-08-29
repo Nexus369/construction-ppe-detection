@@ -184,9 +184,10 @@ class Config:
     SMTP_STARTTLS = os.environ.get("SMTP_STARTTLS", "1") not in ("0", "false", "False")
 
     # Comma-separated list of allowed frontend origins for CORS.
+    _raw_cors = os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
     CORS_ORIGINS = [
-        origin.strip()
-        for origin in os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+        origin.strip().rstrip("/")
+        for origin in _raw_cors.split(",")
         if origin.strip()
     ]
 
