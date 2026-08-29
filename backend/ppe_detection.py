@@ -22,13 +22,22 @@ NAMES = {
 
 
 def _resolve_model_path():
-    if "MODEL_PATH" in os.environ:
+    if "MODEL_PATH" in os.environ and os.path.isfile(os.environ["MODEL_PATH"]):
         return os.environ["MODEL_PATH"]
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    onnx_candidate = os.path.join(base_dir, "best.onnx")
-    if os.path.isfile(onnx_candidate):
-        return onnx_candidate
-    return os.path.join(base_dir, "best.pt")
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(here, "best.onnx"),
+        os.path.join(here, "..", "best.onnx"),
+        os.path.join(os.getcwd(), "best.onnx"),
+        os.path.join(os.getcwd(), "..", "best.onnx"),
+        os.path.join(here, "best.pt"),
+        os.path.join(here, "..", "best.pt"),
+        os.path.join(os.getcwd(), "best.pt"),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return os.path.abspath(c)
+    return os.path.join(here, "best.onnx")
 
 
 def load_model():

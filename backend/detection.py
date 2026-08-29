@@ -543,6 +543,22 @@ def snapshot():
     return jsonify({"success": True, "record_id": record.id, "stored": bool(stored)})
 
 
+@detection_bp.route("/test-detection", methods=["GET"])
+def test_detection_diagnostic():
+    from ppe_detection import _resolve_model_path
+    resolved = _resolve_model_path()
+    model = _get_model()
+    frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    ann, dets = process_frame(frame, model, draw=False)
+    return jsonify({
+        "success": True,
+        "resolved_model_path": resolved,
+        "exists": os.path.isfile(resolved),
+        "model_type": model[0] if isinstance(model, tuple) else "yolo",
+        "detections": dets
+    })
+
+
 @detection_bp.route("/socket", methods=["POST"])
 @jwt_required()
 def process_socket_frame():
