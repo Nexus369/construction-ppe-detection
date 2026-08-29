@@ -54,6 +54,9 @@ def _color_for_class(class_name):
     return BOX_COLORS["other"]
 
 
+# Limit threads to reduce memory and CPU overhead on cloud hosts
+torch.set_num_threads(1)
+
 def process_frame(frame, model, draw=True, conf=0.25):
     """Run detection on a single BGR frame.
 
@@ -69,7 +72,8 @@ def process_frame(frame, model, draw=True, conf=0.25):
     if frame is None or model is None:
         return None, []
 
-    results = model(frame, conf=conf, iou=0.45, verbose=False)
+    with torch.inference_mode():
+        results = model(frame, conf=conf, iou=0.45, verbose=False, imgsz=480)
 
     detections = []
     for result in results:

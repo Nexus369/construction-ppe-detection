@@ -570,6 +570,11 @@ def process_socket_frame():
         if frame is None:
             return jsonify({"success": False, "message": "Failed to decode frame"}), 400
 
+        # Downscale large frames to avoid memory spikes on low-RAM cloud instances
+        if frame.shape[1] > 640:
+            h, w = frame.shape[:2]
+            frame = cv2.resize(frame, (640, int(h * 640 / w)))
+
         # draw=False: the browser already has the raw frame on <video> and
         # draws its own overlay from the returned box coordinates.
         #
