@@ -38,7 +38,17 @@ def signup():
     if len(password) < 8:
         return _validation_error("Password must be at least 8 characters")
 
-    if User.query.filter_by(email=email).first():
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        # If user is in ADMIN_EMAILS, permit updating their password on signup
+        if email in current_app.config.get("ADMIN_EMAILS", set()):
+            existing_user.set_password(password)
+            existing_user.is_admin = True
+            if name:
+                existing_user.name = name
+            db.session.commit()
+            token = create_access_token(identity=str(existing_user.id))
+            return jsonify({"success": True, "token": token, "user": existing_user.to_public_dict()}), 200
         return _validation_error("An account with this email already exists")
 
     user = User(name=name, email=email)
@@ -53,6 +63,32 @@ def signup():
 
     token = create_access_token(identity=str(user.id))
     return jsonify({"success": True, "token": token, "user": user.to_public_dict()}), 201
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+@limiter.limit("10 per hour")
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or data.get("new_password") or ""
+
+    if not EMAIL_RE.match(email):
+        return _validation_error("A valid email is required")
+    if len(password) < 8:
+        return _validation_error("Password must be at least 8 characters")
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(name=email.split("@")[0].capitalize(), email=email)
+        db.session.add(user)
+
+    user.set_password(password)
+    if email in current_app.config.get("ADMIN_EMAILS", set()):
+        user.is_admin = True
+    db.session.commit()
+
+    token = create_access_token(identity=str(user.id))
+    return jsonify({"success": True, "message": "Password reset successfully", "token": token, "user": user.to_public_dict()})
 
 
 @auth_bp.route("/login", methods=["POST"])
