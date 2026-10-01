@@ -1,0 +1,258 @@
+# SafetyFirst — Raspberry Pi Checkpoint
+
+A fullscreen gate display that owns the camera directly and shows the
+grant/deny ruling for whoever steps in front of it.
+
+Running natively rather than in a browser removes every constraint a web page
+carries at a gate: no HTTPS requirement for camera access, no cache, no kiosk
+flags, no permission prompt — and a direct path to GPIO for the badge reader
+(implemented — see below) and a lock relay (not built yet).
+
+```
+┌── Raspberry Pi ────────────┐        ┌── Backend ──────────────┐
+│  camera → checkpoint.py    │ ─────► │  /api/socket → YOLOv8   │
+│  fullscreen verdict display│ ◄───── │  verdict + detections   │
+└────────────────────────────┘        │  record → database      │
+                                      └──────────┬──────────────┘
+                                                 │
+                                      web admin & worker records
+```
+
+Inference runs on the **backend**, not the Pi, so this install stays light —
+no torch, no ultralytics.
+
+## Install (on the Pi)
+
+```bash
+sudo apt update
+sudo apt install -y python3-tk python3-venv
+```
+
+`python3-tk` is required — it is not bundled with Raspberry Pi OS's Python.
+
+```bash
+cd pi_app
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Badge reader (MFRC522, optional but recommended)
+
+Without it the app falls back to typing tags on a keyboard — fine for
+development, not for a real gate.
+
+```bash
+sudo raspi-config   # Interface Options -> SPI -> Yes, then reboot
+pip install spidev RPi.GPIO mfrc522
+```
+
+Wiring (BCM): `SDA→GPIO8(CE0)  SCK→GPIO11  MOSI→GPIO10  MISO→GPIO9  RST→GPIO25  3.3V→3.3V  GND→GND`
+(3.3V, not 5V — the module doesn't tolerate 5V).
+
+### GPS module (optional, not required to run the gate)
+
+Plug it in — there is nothing to configure. The Quectel TracX-1b this project
+owns is found by its USB vendor id and switched on automatically. With no
+module attached the checkpoint's location stays whatever an admin set by hand
+in the console's **Site Location** page.
+
+A plain NMEA module (a NEO-6M and friends) needs one extra package and an
+explicit port, because nothing in USB descriptors distinguishes one of those
+from any other serial device:
+
+```bash
+pip install pynmea2
+```
+
+then set `SAFETYFIRST_GPS_PORT` in `.env`. `SAFETYFIRST_GPS=off` disables
+location entirely. See `gps_reporter.py`.
+
+### How USB devices are found
+
+The gate master ESP32 and the GNSS modem are both identified rather than
+guessed at. The Pi lists USB serial ports, filters them by vendor id, and
+then asks each remaining candidate who it is before trusting it — the master
+answers `ID?` with its own name. Once found, a board is remembered by USB
+serial number, so moving it to a different socket does not lose it.
+
+This matters more than it sounds. The modem presents **seven** serial
+interfaces. Taking "the first `/dev/ttyUSB*`" hands the gate one of those
+instead of the master, and badge scanning stops working the moment location
+is plugged in — with nothing in the logs to say why.
+
+Nothing to set for any of this. `SAFETYFIRST_SERIAL_PORT` still pins a
+specific port if you ever need to override the search. See `usb_devices.py`.
+
+## Configure
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set `SAFETYFIRST_API` to a URL the Pi can actually reach — the backend
+machine's LAN IP (e.g. `http://192.168.1.9:5000`), not `localhost`, unless the
+backend runs on the Pi itself.
+
+Create a device account through the web sign-up and put those credentials in
+`.env`. Without them the app opens a guest session, which works but files
+every decision against a throwaway account.
+
+## Pre-flight check
+
+Before trusting the gate — especially the first time on a new Pi — run:
+
+```bash
+python doctor.py            # everything except an actual card/GPS read
+python doctor.py --scan     # also waits for a real badge scan and a GPS fix
+```
+
+It walks the chain from kernel to badge to backend (platform, SPI, reader
+libraries, camera, backend reachability, device credentials, site policy,
+GPS) and says which link is broken instead of leaving you to guess from a
+blank screen at demo time.
+
+## Run
+
+```bash
+source venv/bin/activate
+python checkpoint.py
+```
+
+Press **Esc** or **q** to exit.
+
+While developing on a laptop, `SAFETYFIRST_WINDOWED=1` runs it in a normal
+window instead of taking over the screen.
+
+## Home screen icon
+
+A gate is an appliance, so it can be opened like one — a hard-hat icon on the
+Pi's desktop, no terminal and no command to remember:
+
+```bash
+cd pi_app
+./install_launcher.sh
+```
+
+That adds the icon to the desktop and to the applications menu. Two variants:
+
+```bash
+./install_launcher.sh --autostart   # also open it at login, restarting on crash
+./install_launcher.sh --remove      # take all of it back off
+```
+
+Run it as the desktop user, **not** with sudo — everything lands under `$HOME`,
+and a sudo run installs the icon into root's home where nobody will see it.
+
+Tapping the icon opens the gate fullscreen. Right-click it for two extra
+actions: **Open in a window**, for setting the machine up, and **Run
+diagnostics**, which is `doctor.py` in a terminal.
+
+Because there is no console behind an icon, `launch.sh` puts failures on the
+screen rather than into the void — a missing `python3-tk` named as such, a
+crashed app with its last log lines, or a second copy being opened while one
+is already running (which would otherwise fight the first over the camera and
+the master's serial port). Everything it runs is appended to
+`pi_app/checkpoint.log`.
+
+## Start automatically on boot
+
+`./install_launcher.sh --autostart` above is the simpler route and is enough
+for a Pi that logs into its desktop. Use a systemd unit instead when the gate
+should come up without anyone logging in, or when you want it supervised by
+the init system rather than by the desktop session.
+
+Create `/etc/systemd/system/safetyfirst.service`:
+
+```ini
+[Unit]
+Description=SafetyFirst Checkpoint
+After=graphical.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/PPE-Detection/pi_app
+Environment=DISPLAY=:0
+ExecStart=/home/pi/PPE-Detection/pi_app/venv/bin/python checkpoint.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
+```
+
+Adjust `User` and the paths if you are not on the default `pi` account, then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now safetyfirst
+sudo journalctl -u safetyfirst -f     # watch the logs
+```
+
+`Restart=always` brings the checkpoint back up if it crashes or if the
+backend was unreachable at boot.
+
+## If the network drops mid-check
+
+The backend stays authoritative — this isn't an offline mode, since both
+worker identity and the PPE check itself are server-side. What it does
+cover: a PPE check can finish and reach a verdict, and then the network
+can drop in exactly the few seconds before that decision is recorded. When
+that happens the attendance record is saved locally
+(`offline_queue.db`, alongside `checkpoint.py`) instead of being lost, and
+retried automatically every `SAFETYFIRST_QUEUE_FLUSH_INTERVAL` seconds
+(default 15) once the connection is back. The status bar shows `N SYNCING`
+while anything is queued. No deduplication — if a record happens to get
+through right before the connection drops, replaying it is a harmless
+double-write, which is cheaper than building idempotency for a report
+field nobody reads twice. `python doctor.py` reports a non-empty backlog
+as a warning.
+
+## Sensor alerts
+
+A critical alert (gas, etc.) holds the gate — it overrides PPE compliance
+entirely, and this app shows it as a distinct amber "paused" state, not
+the red "denied" one, since it isn't a ruling on whoever's at the badge
+reader. It's checked even while idle (polled every 3s alongside the
+on-site headcount), so the screen shows "Gate Paused" before anyone
+badges in, not only mid-check.
+
+No gas/smoke sensor is wired directly to the Pi — that hardware lives on
+the (not yet built) ESP32-main sensor board, which will `POST` to
+`/api/gate/alerts` once it exists. Until then, alerts only come from the
+admin console's **Alerts** page, which has a "simulate" button hitting the
+same endpoint — useful for testing this behavior without any hardware.
+
+## Troubleshooting
+
+**"Camera 0 not available"** — list what the Pi can see with
+`v4l2-ctl --list-devices` (`sudo apt install v4l-utils`), then set
+`SAFETYFIRST_CAMERA` to the right index.
+
+**"Cannot reach the API"** — from the Pi, check
+`curl http://<backend-ip>:5000/api/health`. If that fails it is the network or
+a firewall, not this app. The backend must bind `0.0.0.0`, which `app.py`
+already does.
+
+**"Device credentials rejected"** — the email/password in `.env` do not match
+an account. This deliberately does *not* fall back to guest, so the gate never
+silently detaches from its named device account.
+
+**Verdict never leaves "Step Up"** — the model has to see a `Person` before it
+rules on anything. Check the detection log in the web admin console to confirm
+frames are arriving.
+
+## Notes
+
+- The display runs at camera rate while inference is throttled to
+  `SAFETYFIRST_INTERVAL` (0.5s default) — a person does not change PPE thirty
+  times a second, and sending every frame would only load the API.
+- Required PPE is set live from the admin console's **Checkpoint Policy**
+  page (`backend/site_settings.py`), not hardcoded — the gate and the web
+  dashboard read the same policy, so changing it takes effect on the next
+  frame with no redeploy.
+- Local (on-Pi) inference with the AI HAT is a future option; it needs the
+  model converted `.pt → ONNX → HEF` with Hailo's compiler.

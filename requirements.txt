@@ -1,0 +1,17 @@
+flask>=2.3
+flask-cors
+flask-sqlalchemy
+flask-jwt-extended
+flask-limiter
+psycopg2-binary
+google-auth
+requests
+gunicorn
+numpy>=1.26.0
+opencv-python-headless
+ultralytics
+onnxruntime
+python-dotenv
+gradio>=4.0.0
+fastapi
+uvicorn

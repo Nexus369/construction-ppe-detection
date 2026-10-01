@@ -1,0 +1,99 @@
+"""Recording who changed what.
+
+Deliberately never raises. An audit write failing must not take down the
+action it was describing — a policy change that half-succeeds because
+logging broke is worse than a policy change with no log line.
+"""
+
+import json
+
+from flask import current_app
+from flask_jwt_extended import get_jwt_identity
+
+from extensions import db
+from models import AuditEvent, User
+
+# Actions worth recording: things that change what the system will do, or
+# who it will do it for. Ordinary reads and gate decisions are not here —
+# decisions already have their own permanent record, and logging every
+# page view would bury the handful of entries that matter.
+POLICY_CHANGED = "policy.changed"
+USER_DELETED = "user.deleted"
+WORKER_UPDATED = "worker.updated"
+LOCATION_CHANGED = "location.changed"
+ALERT_ACKNOWLEDGED = "alert.acknowledged"
+
+
+def record(action, summary, detail=None, actor=None, actor_name=None):
+    """Append one audit entry. Returns True if it was written.
+
+    actor_name is for somebody who acted but holds no account here — a
+    contractor acknowledging a safety notice, say. Naming them skips the
+    JWT lookup entirely, which matters: on a route with no token,
+    get_jwt_identity() raises rather than returning None, and the entry
+    that mattered most would be the one silently lost.
+    """
+    try:
+        if actor is None and actor_name is None:
+            try:
+                identity = get_jwt_identity()
+            except RuntimeError:
+                # No JWT verified on this request. Not an error here: some
+                # callers legitimately act outside a session.
+                identity = None
+            actor = db.session.get(User, int(identity)) if identity else None
+
+        event = AuditEvent(
+            actor_id=actor.id if actor else None,
+            actor_name=(actor.name if actor else (actor_name or "Unknown"))[:120],
+            action=action,
+            summary=summary[:255],
+            detail_json=json.dumps(detail) if detail is not None else None,
+        )
+        db.session.add(event)
+        db.session.commit()
+        return True
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.exception("Could not write audit entry for %s", action)
+        return False
+
+
+def describe_policy_change(before, after):
+    """Summarise a settings change in the terms an administrator used.
+
+    Only mentions what actually moved. A diff that lists unchanged values
+    makes the entries that matter harder to spot.
+    """
+    parts = []
+
+    old_ppe = before.get("required_ppe") or []
+    new_ppe = after.get("required_ppe") or []
+    if old_ppe != new_ppe:
+        added = [i for i in new_ppe if i not in old_ppe]
+        removed = [i for i in old_ppe if i not in new_ppe]
+        if added:
+            parts.append("required " + ", ".join(added))
+        if removed:
+            # The direction that weakens the gate, called out plainly.
+            parts.append("stopped requiring " + ", ".join(removed))
+
+    old_conf = before.get("confidence_threshold")
+    new_conf = after.get("confidence_threshold")
+    if old_conf != new_conf:
+        parts.append(f"confidence {old_conf} to {new_conf}")
+
+    return "; ".join(parts) if parts else "no effective change"
+
+
+def describe_location_change(before, after):
+    """Summarise a site-location change in plain terms."""
+    old = before or {}
+    new = after or {}
+    if old.get("lat") == new.get("lat") and old.get("lng") == new.get("lng") and old.get("label") == new.get("label"):
+        return "no effective change"
+    if old.get("lat") is None:
+        where = f"{new.get('lat')}, {new.get('lng')}"
+        return f"set to {where}" + (f" ({new['label']})" if new.get("label") else "")
+    where = f"{new.get('lat')}, {new.get('lng')}"
+    return f"moved to {where}" + (f" ({new['label']})" if new.get("label") else "")
