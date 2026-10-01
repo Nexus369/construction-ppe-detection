@@ -166,6 +166,19 @@ def _get_model():
                 _model = load_model()
     return _model
 
+try:
+    import spaces
+except ImportError:
+    class spaces:
+        @staticmethod
+        def GPU(func=None, **kwargs):
+            if func is not None: return func
+            return lambda f: f
+
+@spaces.GPU
+def gpu_process_frame(frame, conf):
+    m = _get_model()
+    return process_frame(frame, m, draw=False, conf=conf)
 
 def _new_state():
     return {
@@ -600,14 +613,8 @@ def process_socket_frame():
         # takes over from the CPU.
         inference_started = time.perf_counter()
         
-        try:
-            from app import api_process_frame
-            _, detections = api_process_frame(frame, site_settings.get("confidence_threshold"))
-        except ImportError:
-            # Fallback for local testing when app.py is not the entrypoint
-            _, detections = process_frame(
-                frame, model, draw=False, conf=site_settings.get("confidence_threshold")
-            )
+        _, detections = gpu_process_frame(frame, site_settings.get("confidence_threshold"))
+        
         inference_ms = (time.perf_counter() - inference_started) * 1000.0
         _record_inference(state, inference_ms)
 
