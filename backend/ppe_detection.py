@@ -34,6 +34,8 @@ def _resolve_model_path():
         os.path.join(here, "..", "best.pt"),
         os.path.join(os.getcwd(), "best.pt"),
     ]
+    if os.environ.get("SPACE_ID"):
+        candidates = [c for c in candidates if c.endswith(".pt")] + [c for c in candidates if c.endswith(".onnx")]
     for c in candidates:
         if os.path.isfile(c):
             return os.path.abspath(c)
@@ -45,7 +47,7 @@ def load_model():
     Prioritizes pure ONNX Runtime for ultra-low memory (~15MB) and high CPU performance.
     """
     model_path = _resolve_model_path()
-    if model_path.endswith(".onnx"):
+    if model_path.endswith(".onnx") and not os.environ.get("SPACE_ID"):
         try:
             import onnxruntime as ort
             session = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
