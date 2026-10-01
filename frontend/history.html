@@ -184,7 +184,7 @@
         async function loadAttendance() {
             const tbody = el('attendanceBody');
             try {
-                const res = await Auth.fetch('/v1/gate/attendance/me');
+                const res = await Auth.fetch('/gradio_api/flask/gate/attendance/me');
                 if (!res.ok) { tbody.innerHTML = '<tr><td colspan="3" class="cell-empty">Could not load gate scans.</td></tr>'; return; }
                 const data = await res.json();
                 el('pDaysPresent').textContent = data.days_present;
@@ -233,7 +233,7 @@
 
         async function loadSummary() {
             try {
-                const res = await Auth.fetch('/v1/history?page=1&per_page=200');
+                const res = await Auth.fetch('/gradio_api/flask/history?page=1&per_page=200');
                 if (!res.ok) return;
                 const data = await res.json();
                 const granted = data.records.filter((r) => r.verdict === 'granted').length;
@@ -255,7 +255,7 @@
                 // page client-side while "Page X of Y" is still computed
                 // from the unfiltered total made the pager lie.
                 const verdictParam = filter === 'all' ? '' : `&verdict=${filter}`;
-                const res = await Auth.fetch(`/v1/history?page=${currentPage}&per_page=${perPage}${verdictParam}`);
+                const res = await Auth.fetch(`/gradio_api/flask/history?page=${currentPage}&per_page=${perPage}${verdictParam}`);
                 if (!res.ok) {
                     tbody.innerHTML = '<tr><td colspan="5" class="cell-empty" style="color:var(--danger)">Could not load records.</td></tr>';
                     return;
@@ -304,7 +304,7 @@
         // that is the recipient's to do — but they can see it exists.
         (async function loadMyNotices() {
             try {
-                const res = await Auth.fetch('/v1/notices/me');
+                const res = await Auth.fetch('/gradio_api/flask/notices/me');
                 if (!res.ok) return;
                 const d = await res.json();
                 const list = d.notices || [];

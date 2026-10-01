@@ -85,7 +85,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         cls = type(self)
-        if self.path.rstrip("/") == "/v1/gate/badge":
+        if self.path.rstrip("/") == "/gradio_api/flask/gate/badge":
             # A badge presented to a reader that isn't wired to this Pi —
             # a networked reader, or the master board reporting over Wi-Fi
             # rather than USB. Same token as the hazard endpoints: a stranger
@@ -102,7 +102,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._reply(201, {"success": True, "tag": tag})
             return
 
-        if self.path.rstrip("/") == "/v1/gate/alerts":
+        if self.path.rstrip("/") == "/gradio_api/flask/gate/alerts":
             kind = (data.get("kind") or "").strip()
             severity = (data.get("severity") or "").strip()
             if not kind or severity not in ("critical", "warning", "info"):
@@ -115,7 +115,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._reply(201, {"success": True, "alert": alert})
             return
 
-        if self.path.rstrip("/") == "/v1/gate/sensors":
+        if self.path.rstrip("/") == "/gradio_api/flask/gate/sensors":
             kind = (data.get("kind") or "").strip()
             try:
                 value = float(data.get("value"))
@@ -149,7 +149,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):                         # noqa: N802 - stdlib hook
         """Liveness only — so a sensor can tell "Pi is up" from "wrong IP"."""
-        if self.path.rstrip("/") in ("/v1/health", "/v1/gate/health"):
+        if self.path.rstrip("/") in ("/gradio_api/flask/health", "/gradio_api/flask/gate/health"):
             self._reply(200, {"success": True, "status": "ok", "service": "gate-local"})
             return
         self._reply(404, {"success": False, "message": "No such endpoint"})

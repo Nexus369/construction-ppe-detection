@@ -51,7 +51,7 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from admin import admin_required
 from gate import device_required
 
-cctv_bp = Blueprint("cctv", __name__, url_prefix="/v1/cctv")
+cctv_bp = Blueprint("cctv", __name__, url_prefix="/gradio_api/flask/cctv")
 
 # A camera that has stopped answering must not take a request worker with
 # it. Deliberately short: a frame four seconds late is not a live view.

@@ -256,7 +256,7 @@
 
         async function load() {
             try {
-                const res = await Auth.fetch('/v1/admin/location');
+                const res = await Auth.fetch('/gradio_api/flask/admin/location');
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 live = d.location;
@@ -278,7 +278,7 @@
         // clobber an edit in progress or fight isDirty()'s judgement of one.
         async function poll() {
             try {
-                const res = await Auth.fetch('/v1/admin/location');
+                const res = await Auth.fetch('/gradio_api/flask/admin/location');
                 if (!res.ok) return;
                 const d = await res.json();
                 live = d.location;
@@ -335,7 +335,7 @@
             btn.disabled = true;
             refreshSaveState('Saving…');
             try {
-                const res = await Auth.fetch('/v1/admin/location', {
+                const res = await Auth.fetch('/gradio_api/flask/admin/location', {
                     method: 'PUT',
                     body: JSON.stringify(current),
                 });

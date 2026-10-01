@@ -195,7 +195,7 @@
             try {
                 // Same blob dance as elsewhere: the endpoint is behind the
                 // admin JWT, which a plain download link cannot send.
-                const res = await Auth.fetch(`/v1/admin/reports/${selected}.csv${qs}`);
+                const res = await Auth.fetch(`/gradio_api/flask/admin/reports/${selected}.csv${qs}`);
                 if (!res.ok) throw new Error('Export failed');
                 const blob = await res.blob();
                 const match = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
@@ -218,7 +218,7 @@
 
         (async function load() {
             try {
-                const res = await Auth.fetch('/v1/admin/reports');
+                const res = await Auth.fetch('/gradio_api/flask/admin/reports');
                 if (!res.ok) throw new Error('Request failed');
                 reports = (await res.json()).reports;
                 renderReports();

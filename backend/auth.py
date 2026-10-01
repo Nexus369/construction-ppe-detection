@@ -10,7 +10,7 @@ from google.oauth2 import id_token as google_id_token
 from extensions import db, limiter
 from models import User
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/v1/auth")
+auth_bp = Blueprint("auth", __name__, url_prefix="/gradio_api/flask/auth")
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 GUEST_TOKEN_EXPIRES = timedelta(hours=24)

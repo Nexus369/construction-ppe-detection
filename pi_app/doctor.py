@@ -151,7 +151,7 @@ def check_backend():
 
     base = os.environ.get("SAFETYFIRST_API", "http://localhost:5000")
     try:
-        res = requests.get(f"{base}/v1/health", timeout=5)
+        res = requests.get(f"{base}/gradio_api/flask/health", timeout=5)
     except Exception as exc:  # noqa: BLE001
         report(BAD, "Backend reachable",
                f"{base} did not respond ({exc.__class__.__name__}).\n"
@@ -180,7 +180,7 @@ def check_credentials(base):
         return None
 
     try:
-        res = requests.post(f"{base}/v1/auth/login",
+        res = requests.post(f"{base}/gradio_api/flask/auth/login",
                             json={"email": email, "password": password}, timeout=5)
         data = res.json()
     except Exception as exc:  # noqa: BLE001
@@ -201,7 +201,7 @@ def check_policy(base, token):
     import requests
 
     try:
-        res = requests.get(f"{base}/v1/status",
+        res = requests.get(f"{base}/gradio_api/flask/status",
                            headers={"Authorization": f"Bearer {token}"}, timeout=5)
         required = res.json().get("required_ppe", [])
     except Exception as exc:  # noqa: BLE001

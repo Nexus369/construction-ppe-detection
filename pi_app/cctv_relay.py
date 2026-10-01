@@ -406,7 +406,7 @@ class CCTVRelay:
             raise RuntimeError("not signed in")
 
         res = self._api.session.post(
-            f"{self._api.base}/v1/cctv/frame",
+            f"{self._api.base}/gradio_api/flask/cctv/frame",
             params={"id": self._id},
             data=jpeg,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "image/jpeg"},

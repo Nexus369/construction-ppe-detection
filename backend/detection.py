@@ -20,7 +20,7 @@ from models import DetectionRecord, User
 from params import int_arg
 from ppe_detection import load_model, process_frame
 
-detection_bp = Blueprint("detection", __name__, url_prefix="/v1")
+detection_bp = Blueprint("detection", __name__, url_prefix="/gradio_api/flask")
 
 _model = None
 _model_lock = threading.Lock()

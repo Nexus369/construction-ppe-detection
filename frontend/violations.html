@@ -206,7 +206,7 @@
                 return;
             }
             try {
-                const res = await Auth.fetch(`/v1/admin/violations/${v.id}/evidence`);
+                const res = await Auth.fetch(`/gradio_api/flask/admin/violations/${v.id}/evidence`);
                 if (!res.ok) {
                     host.innerHTML = '<span class="evidence-msg">The stored image is no longer available.</span>';
                     return;
@@ -229,7 +229,7 @@
 
         async function load() {
             try {
-                const res = await Auth.fetch(`/v1/admin/violations?page=${page}&per_page=${perPage}&kind=${kind}`);
+                const res = await Auth.fetch(`/gradio_api/flask/admin/violations?page=${page}&per_page=${perPage}&kind=${kind}`);
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 rows = d.violations;

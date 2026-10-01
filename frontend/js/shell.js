@@ -294,7 +294,7 @@ const Shell = {
           btn.disabled = true;
           btn.textContent = 'Clearing…';
           try {
-            await Auth.fetch(`/v1/alerts/${alert.id}/acknowledge`, { method: 'POST' });
+            await Auth.fetch(`/gradio_api/flask/alerts/${alert.id}/acknowledge`, { method: 'POST' });
           } catch (e) { /* the next poll will show it's still active if this failed */ }
           acking = false;
           poll();
@@ -304,7 +304,7 @@ const Shell = {
 
     const poll = async () => {
       try {
-        const res = await Auth.fetch('/v1/alerts/active');
+        const res = await Auth.fetch('/gradio_api/flask/alerts/active');
         if (!res.ok) return;
         const d = await res.json();
         const list = d.alerts || [];

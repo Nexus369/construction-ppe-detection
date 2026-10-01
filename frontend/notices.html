@@ -209,7 +209,7 @@
         }
 
         async function send(reference, byHand) {
-            const url = `/v1/admin/notices/${encodeURIComponent(reference)}/send`
+            const url = `/gradio_api/flask/admin/notices/${encodeURIComponent(reference)}/send`
                       + (byHand ? '?by=hand' : '');
             const res = await Auth.fetch(url, { method: 'POST' });
             const d = await res.json();
@@ -221,7 +221,7 @@
             if (!confirm(`Withdraw ${reference}? The link stops working, `
                        + `and the record that it was issued stays.`)) return;
             const res = await Auth.fetch(
-                `/v1/admin/notices/${encodeURIComponent(reference)}/revoke`,
+                `/gradio_api/flask/admin/notices/${encodeURIComponent(reference)}/revoke`,
                 { method: 'POST' });
             const d = await res.json();
             if (!res.ok || !d.success) { alert(d.message || 'Could not withdraw it.'); return; }
@@ -233,7 +233,7 @@
 
         async function loadNotices(append) {
             const res = await Auth.fetch(
-                `/v1/admin/notices?show=${show}&page=${page}&per_page=20`);
+                `/gradio_api/flask/admin/notices?show=${show}&page=${page}&per_page=20`);
             const d = await res.json();
             const list = el('ntList');
             if (!append) list.innerHTML = '';
@@ -281,7 +281,7 @@
                         <i class="fas fa-link" style="font-size:.7rem"></i>
                         <code data-ref="${n.reference}">${link}…</code>
                         <span class="nt-acts">
-                            <a class="btn btn-outline btn-sm" href="/v1/admin/notices/${n.reference}.json"
+                            <a class="btn btn-outline btn-sm" href="/gradio_api/flask/admin/notices/${n.reference}.json"
                                title="Machine-readable copy">JSON</a>
                             <button class="btn btn-outline btn-sm" data-send="${n.reference}"
                                     title="${n.recipient.email ? 'Email it to ' + n.recipient.email : 'Record that you sent it yourself'}">
@@ -300,7 +300,7 @@
         }
 
         async function loadWorkers() {
-            const res = await Auth.fetch('/v1/admin/users');
+            const res = await Auth.fetch('/gradio_api/flask/admin/users');
             const d = await res.json();
             const sel = el('worker');
             sel.innerHTML = '<option value="">Choose…</option>';
@@ -322,7 +322,7 @@
             // /results returns only detections and a timestamp - no id and
             // no verdict - so it cannot answer this. /violations can.
             const res = await Auth.fetch(
-                `/v1/admin/violations?kind=denied&per_page=50&user=${encodeURIComponent(userId)}`);
+                `/gradio_api/flask/admin/violations?kind=denied&per_page=50&user=${encodeURIComponent(userId)}`);
             const d = await res.json();
             const denied = d.violations || d.records || d.items || [];
 
@@ -354,7 +354,7 @@
             btn.disabled = true;
             btn.textContent = 'Issuing…';
             try {
-                const res = await Auth.fetch('/v1/admin/notices', {
+                const res = await Auth.fetch('/gradio_api/flask/admin/notices', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -396,7 +396,7 @@
         el('csvBtn').addEventListener('click', async e => {
             e.preventDefault();
             // Auth.fetch carries the header a plain link cannot.
-            const res = await Auth.fetch('/v1/admin/notices.csv');
+            const res = await Auth.fetch('/gradio_api/flask/admin/notices.csv');
             const blob = await res.blob();
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);

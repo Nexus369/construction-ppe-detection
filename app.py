@@ -109,7 +109,7 @@ class FlaskAPIMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] in ("http", "websocket"):
             print(f"MIDDLEWARE SEES: {scope.get('method')} {scope.get('path')}", flush=True)
-            if scope.get("path", "").startswith("/api"):
+            if scope.get("path", "").startswith("/gradio_api/flask"):
                 await self.flask_asgi(scope, receive, send)
                 return
         await self.app(scope, receive, send)

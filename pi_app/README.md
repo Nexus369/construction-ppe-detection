@@ -222,7 +222,7 @@ badges in, not only mid-check.
 
 No gas/smoke sensor is wired directly to the Pi — that hardware lives on
 the (not yet built) ESP32-main sensor board, which will `POST` to
-`/v1/gate/alerts` once it exists. Until then, alerts only come from the
+`/gradio_api/flask/gate/alerts` once it exists. Until then, alerts only come from the
 admin console's **Alerts** page, which has a "simulate" button hitting the
 same endpoint — useful for testing this behavior without any hardware.
 

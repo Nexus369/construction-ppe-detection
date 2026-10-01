@@ -259,7 +259,7 @@ class ApiClient:
         if EMAIL and PASSWORD:
             try:
                 res = self.session.post(
-                    f"{self.base}/v1/auth/login",
+                    f"{self.base}/gradio_api/flask/auth/login",
                     json={"email": EMAIL, "password": PASSWORD}, timeout=10,
                 )
                 data = res.json()
@@ -275,7 +275,7 @@ class ApiClient:
             return False, "Device credentials rejected", True
 
         try:
-            res = self.session.post(f"{self.base}/v1/auth/guest", timeout=10)
+            res = self.session.post(f"{self.base}/gradio_api/flask/auth/guest", timeout=10)
             data = res.json()
             if res.ok and data.get("success"):
                 self.token = data["token"]
@@ -289,21 +289,21 @@ class ApiClient:
     def start(self) -> bool:
         try:
             return self.session.post(
-                f"{self.base}/v1/start", headers=self._headers(), timeout=10
+                f"{self.base}/gradio_api/flask/start", headers=self._headers(), timeout=10
             ).ok
         except requests.RequestException:
             return False
 
     def stop(self) -> None:
         try:
-            self.session.post(f"{self.base}/v1/stop", headers=self._headers(), timeout=5)
+            self.session.post(f"{self.base}/gradio_api/flask/stop", headers=self._headers(), timeout=5)
         except requests.RequestException:
             pass
 
     def lookup_badge(self, tag: str) -> tuple[dict | None, bool, str]:
         try:
             res = self.session.get(
-                f"{self.base}/v1/gate/worker", params={"tag": tag},
+                f"{self.base}/gradio_api/flask/gate/worker", params={"tag": tag},
                 headers=self._headers(), timeout=10,
             )
             data = res.json()
@@ -316,7 +316,7 @@ class ApiClient:
     def present_today(self) -> int:
         try:
             res = self.session.get(
-                f"{self.base}/v1/gate/attendance/today",
+                f"{self.base}/gradio_api/flask/gate/attendance/today",
                 headers=self._headers(), timeout=10,
             )
             return res.json().get("present_count", 0) if res.ok else 0
@@ -337,7 +337,7 @@ class ApiClient:
             body["taken_at"] = taken_at
         try:
             res = self.session.post(
-                f"{self.base}/v1/gate/sensors", json=body,
+                f"{self.base}/gradio_api/flask/gate/sensors", json=body,
                 headers=self._headers(), timeout=10,
             )
             return bool(res.ok and (res.json() or {}).get("success"))
@@ -348,7 +348,7 @@ class ApiClient:
         """Replay a locally-raised alert. True only if the cloud stored it."""
         try:
             res = self.session.post(
-                f"{self.base}/v1/gate/alerts",
+                f"{self.base}/gradio_api/flask/gate/alerts",
                 json={"kind": kind, "severity": severity,
                       "message": message, "source": source},
                 headers=self._headers(), timeout=10,
@@ -361,7 +361,7 @@ class ApiClient:
         """Everything needed to rule offline, in one consistent snapshot."""
         try:
             res = self.session.get(
-                f"{self.base}/v1/gate/roster",
+                f"{self.base}/gradio_api/flask/gate/roster",
                 headers=self._headers(), timeout=20,
             )
             if not res.ok:
@@ -374,7 +374,7 @@ class ApiClient:
     def mark_attendance(self, user_id: int, granted: bool, missing: list) -> bool:
         try:
             return self.session.post(
-                f"{self.base}/v1/gate/attendance",
+                f"{self.base}/gradio_api/flask/gate/attendance",
                 json={"user_id": user_id, "granted": granted, "missing_ppe": missing},
                 headers=self._headers(), timeout=10,
             ).ok
@@ -384,7 +384,7 @@ class ApiClient:
     def active_alerts(self) -> list:
         try:
             res = self.session.get(
-                f"{self.base}/v1/alerts/active", headers=self._headers(), timeout=10
+                f"{self.base}/gradio_api/flask/alerts/active", headers=self._headers(), timeout=10
             )
             if res.ok:
                 return res.json().get("alerts", [])
@@ -395,7 +395,7 @@ class ApiClient:
     def report_location(self, lat: float, lng: float) -> bool:
         try:
             return self.session.post(
-                f"{self.base}/v1/gate/location",
+                f"{self.base}/gradio_api/flask/gate/location",
                 json={"lat": lat, "lng": lng},
                 headers=self._headers(), timeout=10,
             ).ok
@@ -409,7 +409,7 @@ class ApiClient:
         payload = base64.b64encode(buf).decode()
         try:
             res = self.session.post(
-                f"{self.base}/v1/socket",
+                f"{self.base}/gradio_api/flask/socket",
                 json={"frame": f"data:image/jpeg;base64,{payload}"},
                 headers=self._headers(), timeout=REQUEST_TIMEOUT,
             )

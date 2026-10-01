@@ -203,7 +203,7 @@ const Chatbot = {
     const typing = this._appendTyping(log);
 
     try {
-      const res = await Auth.fetch('/v1/chat', {
+      const res = await Auth.fetch('/gradio_api/flask/chat', {
         method: 'POST',
         body: JSON.stringify({
           message: text,

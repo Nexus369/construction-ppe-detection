@@ -197,7 +197,7 @@
         // Is the detection service reachable?
         (async () => {
             try {
-                const res = await fetch(`${window.API_BASE_URL}/v1/health`, { cache: 'no-store' });
+                const res = await fetch(`${window.API_BASE_URL}/gradio_api/flask/health`, { cache: 'no-store' });
                 chip('chipApi', res.ok ? 'ok' : 'bad', res.ok ? 'Detection service online' : 'Service error');
             } catch (e) {
                 chip('chipApi', 'bad', 'Service unreachable');

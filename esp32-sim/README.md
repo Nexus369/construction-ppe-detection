@@ -8,8 +8,8 @@ of the Pi.
 
 `alert_sim/alert_sim.ino` signs in the same way `pi_app/checkpoint.py`
 does, then waits for a command typed into the Arduino IDE's Serial Monitor
-and reports either a pre-decided alert (`/v1/gate/alerts`) or a raw sensor
-value (`/v1/gate/sensors`, classified against a threshold you configure on
+and reports either a pre-decided alert (`/gradio_api/flask/gate/alerts`) or a raw sensor
+value (`/gradio_api/flask/gate/sensors`, classified against a threshold you configure on
 the Alerts page) — the same two endpoints the real ESP32-main sensor board
 will use once it's built. Nothing on the backend changes on that day; this
 sketch is disposable, the endpoints aren't.
@@ -32,7 +32,7 @@ sketch is disposable, the endpoints aren't.
    python app.py`) and bound to `0.0.0.0` (it already is, by default).
 
    `DEVICE_EMAIL`/`DEVICE_PASSWORD` are optional — leave both blank to sign
-   in as a guest, which is enough for this test since `/v1/gate/alerts`
+   in as a guest, which is enough for this test since `/gradio_api/flask/gate/alerts`
    only needs *any* signed-in session, not an admin one.
 
 4. Tools → Board → your ESP32 model, then Upload.
@@ -95,7 +95,7 @@ of the wire, not just the admin UI. Humidity here is a stand-in for a real
 DHT11: the sketch has no sensor hardware, so it fakes a plausible
 20-90% range the same way it fakes gas and temperature. When a physical
 DHT11 is wired to the real ESP32 board, `simHumidity`'s random walk gets
-replaced with an actual `dht.readHumidity()` call — the `/v1/gate/sensors`
+replaced with an actual `dht.readHumidity()` call — the `/gradio_api/flask/gate/sensors`
 endpoint it reports to doesn't change.
 
 Then check the web admin console's **Alerts** page (or any open admin/
