@@ -156,8 +156,9 @@ def process_frame(frame, model_tuple, draw=True, conf=0.25):
         return _process_onnx(frame, model, draw=draw, conf=conf)
 
     import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     with torch.inference_mode():
-        results = model(frame, conf=conf, iou=0.45, verbose=False, imgsz=480)
+        results = model(frame, conf=conf, iou=0.45, verbose=False, imgsz=480, device=device)
 
     detections = []
     for result in results:

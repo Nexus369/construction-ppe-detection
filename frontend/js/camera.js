@@ -84,16 +84,20 @@ class CameraFeed {
 
     startFrameCapture() {
         if (this.intervalId) {
-            clearInterval(this.intervalId);
+            clearTimeout(this.intervalId);
         }
 
-        this.intervalId = setInterval(() => {
-            this.captureAndSendFrame();
-        }, this.frameInterval);
+        const loop = () => {
+            if (!this.streaming) return;
+            this.captureAndSendFrame().finally(() => {
+                this.intervalId = setTimeout(loop, 100); // 100ms pause between frames
+            });
+        };
+        loop();
     }
 
     captureAndSendFrame() {
-        if (!this.streaming || this.processingFrame) return;
+        if (!this.streaming || this.processingFrame) return Promise.resolve();
 
         this.processingFrame = true;
 
@@ -110,7 +114,7 @@ class CameraFeed {
         const frameData = this.canvas.toDataURL('image/jpeg', 0.8);
 
         // Send frame to server
-        this.sendFrameToServer(frameData)
+        return this.sendFrameToServer(frameData)
             .then(result => {
                 if (result && result.processed && result.detections) {
                     this.drawBoundingBoxes(result.detections);

@@ -598,9 +598,22 @@ def process_socket_frame():
         # and lumping them in would flatter or blame the model for work it
         # didn't do. This is the number that should change when the AI HAT
         # takes over from the CPU.
+        try:
+            import spaces
+        except ImportError:
+            class spaces:
+                @staticmethod
+                def GPU(func=None, **kwargs):
+                    if func is not None: return func
+                    return lambda f: f
+
+        @spaces.GPU
+        def _gpu_process_frame(f, m, c):
+            return process_frame(f, m, draw=False, conf=c)
+
         inference_started = time.perf_counter()
-        _, detections = process_frame(
-            frame, model, draw=False, conf=site_settings.get("confidence_threshold")
+        _, detections = _gpu_process_frame(
+            frame, model, site_settings.get("confidence_threshold")
         )
         inference_ms = (time.perf_counter() - inference_started) * 1000.0
         _record_inference(state, inference_ms)
