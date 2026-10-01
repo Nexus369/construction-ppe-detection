@@ -89,6 +89,10 @@ def detect_ppe(image, conf_threshold):
     ]
     return rgb_output, "\n".join(lines)
 
+@spaces.GPU
+def api_process_frame(bgr_frame, conf_threshold):
+    return process_frame(bgr_frame, model, draw=False, conf=conf_threshold)
+
 # 5. Flask-to-ASGI middleware (pure ASGI, no prefix stripping)
 from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
