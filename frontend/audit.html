@@ -152,7 +152,7 @@
 
         async function load() {
             try {
-                const res = await Auth.fetch(`/api/admin/audit?page=${page}&per_page=${perPage}`);
+                const res = await Auth.fetch(`/v1/admin/audit?page=${page}&per_page=${perPage}`);
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 render(d.events);

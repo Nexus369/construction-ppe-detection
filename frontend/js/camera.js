@@ -179,7 +179,7 @@ class CameraFeed {
 
     async sendFrameToServer(frameData) {
         try {
-            const response = await Auth.fetch('/api/socket', {
+            const response = await Auth.fetch('/v1/socket', {
                 method: 'POST',
                 body: JSON.stringify({ frame: frameData })
             });

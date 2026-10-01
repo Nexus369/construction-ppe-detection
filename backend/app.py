@@ -94,7 +94,7 @@ def create_app():
     cors_origins = list(set(app.config["CORS_ORIGINS"] + [r"https://.*\.vercel\.app"]))
     CORS(
         app,
-        resources={r"/api/*": {
+        resources={r"/v1/*": {
             "origins": cors_origins,
             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
@@ -181,7 +181,7 @@ def create_app():
                 return send_from_directory(FRONTEND_DIR, filename)
             return jsonify({"status": "ok", "service": "PPE Detection API"}), 404
 
-    @app.route("/api/health")
+    @app.route("/v1/health")
     def health():
         """Unauthenticated liveness check.
 

@@ -276,7 +276,7 @@
         async function acknowledge(id, btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Clearing…'; }
             try {
-                await Auth.fetch(`/api/alerts/${id}/acknowledge`, { method: 'POST' });
+                await Auth.fetch(`/v1/alerts/${id}/acknowledge`, { method: 'POST' });
             } catch (e) { /* refresh below will show the true state either way */ }
             loadActive();
             loadHistory();
@@ -284,7 +284,7 @@
 
         async function loadActive() {
             try {
-                const res = await Auth.fetch('/api/alerts/active');
+                const res = await Auth.fetch('/v1/alerts/active');
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 const list = d.alerts || [];
@@ -329,7 +329,7 @@
 
         async function loadHistory() {
             try {
-                const res = await Auth.fetch(`/api/admin/alerts?page=${page}&per_page=${perPage}`);
+                const res = await Auth.fetch(`/v1/admin/alerts?page=${page}&per_page=${perPage}`);
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 renderHistory(d.alerts);
@@ -368,7 +368,7 @@
             const original = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Sending…';
             try {
-                const res = await Auth.fetch('/api/gate/alerts', {
+                const res = await Auth.fetch('/v1/gate/alerts', {
                     method: 'POST',
                     body: JSON.stringify({
                         kind, severity: el('simSeverity').value,
@@ -411,7 +411,7 @@
 
         async function loadReadings() {
             try {
-                const res = await Auth.fetch('/api/alerts/readings');
+                const res = await Auth.fetch('/v1/alerts/readings');
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 const rows = d.readings || [];
@@ -501,7 +501,7 @@
             }
             try {
                 const results = await Promise.all(histKinds.map((k) =>
-                    Auth.fetch(`/api/alerts/readings/history?kind=${encodeURIComponent(k)}&per_page=60`).then((r) => r.json())
+                    Auth.fetch(`/v1/alerts/readings/history?kind=${encodeURIComponent(k)}&per_page=60`).then((r) => r.json())
                 ));
                 renderHistoryChart(histKinds, results.map((d) => d.readings || []));
             } catch (e) {
@@ -541,7 +541,7 @@
 
         async function loadThresholds() {
             try {
-                const res = await Auth.fetch('/api/admin/settings');
+                const res = await Auth.fetch('/v1/admin/settings');
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 thresholds = d.settings.sensor_thresholds || {};
@@ -560,7 +560,7 @@
         }
 
         async function saveThresholds() {
-            const res = await Auth.fetch('/api/admin/settings', {
+            const res = await Auth.fetch('/v1/admin/settings', {
                 method: 'PUT',
                 body: JSON.stringify({ sensor_thresholds: thresholds }),
             });

@@ -425,7 +425,7 @@ def revoke(notice, actor=None):
 # Console side
 # ---------------------------------------------------------------------
 
-@notices_bp.route("/api/admin/notices", methods=["GET"])
+@notices_bp.route("/v1/admin/notices", methods=["GET"])
 @admin_required
 def list_notices():
     """Outstanding first, a page at a time.
@@ -477,7 +477,7 @@ def list_notices():
     })
 
 
-@notices_bp.route("/api/admin/notices", methods=["POST"])
+@notices_bp.route("/v1/admin/notices", methods=["POST"])
 @admin_required
 @limiter.limit("30 per hour")
 def create_notice():
@@ -504,7 +504,7 @@ def create_notice():
     }), 201
 
 
-@notices_bp.route("/api/admin/notices/<reference>/send", methods=["POST"])
+@notices_bp.route("/v1/admin/notices/<reference>/send", methods=["POST"])
 @admin_required
 @limiter.limit("60 per hour")
 def send_notice(reference):
@@ -533,7 +533,7 @@ def send_notice(reference):
     return jsonify({"success": True, "notice": notice.to_dict()})
 
 
-@notices_bp.route("/api/admin/notices/<reference>/revoke", methods=["POST"])
+@notices_bp.route("/v1/admin/notices/<reference>/revoke", methods=["POST"])
 @admin_required
 def revoke_notice(reference):
     actor = db.session.get(User, int(get_jwt_identity()))
@@ -546,7 +546,7 @@ def revoke_notice(reference):
     return jsonify({"success": True, "notice": notice.to_dict()})
 
 
-@notices_bp.route("/api/admin/notices/<reference>.json", methods=["GET"])
+@notices_bp.route("/v1/admin/notices/<reference>.json", methods=["GET"])
 @admin_required
 def export_json(reference):
     """One notice, in a shape another system can read.
@@ -567,7 +567,7 @@ def export_json(reference):
     })
 
 
-@notices_bp.route("/api/admin/notices.csv", methods=["GET"])
+@notices_bp.route("/v1/admin/notices.csv", methods=["GET"])
 @admin_required
 def export_csv():
     """Every notice, one row each, for a spreadsheet or an audit pack."""
@@ -599,7 +599,7 @@ def export_csv():
 # The worker the notice is about
 # ---------------------------------------------------------------------
 
-@notices_bp.route("/api/notices/me", methods=["GET"])
+@notices_bp.route("/v1/notices/me", methods=["GET"])
 @jwt_required()
 def my_notices():
     """Notices issued about the signed-in worker.
@@ -627,7 +627,7 @@ def my_notices():
 # Recipient side — no account, no session, one token
 # ---------------------------------------------------------------------
 
-@notices_bp.route("/api/notice/<token>", methods=["GET"])
+@notices_bp.route("/v1/notice/<token>", methods=["GET"])
 @limiter.limit("60 per hour")
 def read_notice(token):
     notice = by_token(token, mark_delivered=True)
@@ -639,7 +639,7 @@ def read_notice(token):
     return jsonify({"success": True, "notice": notice.to_dict()})
 
 
-@notices_bp.route("/api/notice/<token>/evidence/<int:detection_id>", methods=["GET"])
+@notices_bp.route("/v1/notice/<token>/evidence/<int:detection_id>", methods=["GET"])
 @limiter.limit("60 per hour")
 def notice_evidence(token, detection_id):
     """The frame behind one cited refusal.
@@ -670,7 +670,7 @@ def notice_evidence(token, detection_id):
     return send_file(path, mimetype="image/jpeg")
 
 
-@notices_bp.route("/api/notice/<token>/acknowledge", methods=["POST"])
+@notices_bp.route("/v1/notice/<token>/acknowledge", methods=["POST"])
 @limiter.limit("20 per hour")
 def acknowledge_notice(token):
     notice = by_token(token, mark_delivered=True)

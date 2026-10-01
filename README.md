@@ -231,8 +231,8 @@ certainly why two of our reflashes this round dropped mid-write.
 **A board per job, not one board doing everything** — five ESP32s, each
 with a single responsibility, all reaching the Pi or something that does.
 Two sensor nodes ([`ppe_sensors/`](esp32-main/ppe_sensors/)) read real
-MQ-9 and DHT11 hardware and post to `/api/gate/alerts` and
-`/api/gate/sensors`; two cameras ([`cctv_cam/`](esp32-main/cctv_cam/))
+MQ-9 and DHT11 hardware and post to `/v1/gate/alerts` and
+`/v1/gate/sensors`; two cameras ([`cctv_cam/`](esp32-main/cctv_cam/))
 serve MJPEG on the LAN and are relayed to the console by the Pi; the gate
 master ([`gate_master/`](esp32-main/gate_master/)) carries badges, hazard
 packets and the cooling fan down one USB line.

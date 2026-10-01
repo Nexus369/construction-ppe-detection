@@ -254,7 +254,7 @@
 
         async function loadRequirements() {
             try {
-                const res = await Auth.fetch('/api/status');
+                const res = await Auth.fetch('/v1/status');
                 if (!res.ok) return;
                 const data = await res.json();
                 syncRequirements(data.required_ppe || []);
@@ -329,7 +329,7 @@
             stopAnnouncing();
 
             try {
-                const res = await Auth.fetch(`/api/speech?text=${encodeURIComponent(msg)}`);
+                const res = await Auth.fetch(`/v1/speech?text=${encodeURIComponent(msg)}`);
                 if (res.ok) {
                     const url = URL.createObjectURL(await res.blob());
                     const audio = new Audio(url);
@@ -347,7 +347,7 @@
 
         async function checkStatus() {
             try {
-                const res = await Auth.fetch('/api/status');
+                const res = await Auth.fetch('/v1/status');
                 if (res.ok) return true;
             } catch (e) { /* offline */ }
             return false;
@@ -363,7 +363,7 @@
             }
 
             try {
-                const res = await Auth.fetch('/api/start', { method: 'POST' });
+                const res = await Auth.fetch('/v1/start', { method: 'POST' });
                 if (!res.ok) return;
 
                 isRunning = true;
@@ -402,7 +402,7 @@
             stopAnnouncing();
             if (cameraFeedInstance) cameraFeedInstance.stop();
 
-            try { await Auth.fetch('/api/stop', { method: 'POST' }); } catch (e) { /* ignore */ }
+            try { await Auth.fetch('/v1/stop', { method: 'POST' }); } catch (e) { /* ignore */ }
 
             el('startButton').disabled = false;
             el('stopButton').disabled = true;
@@ -423,8 +423,8 @@
             if (!isRunning) return;
             try {
                 const [sRes, rRes] = await Promise.all([
-                    Auth.fetch('/api/status'),
-                    Auth.fetch('/api/results'),
+                    Auth.fetch('/v1/status'),
+                    Auth.fetch('/v1/results'),
                 ]);
 
                 if (sRes.ok) {
@@ -481,7 +481,7 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Saving…';
             try {
-                const res = await Auth.fetch('/api/snapshot', { method: 'POST' });
+                const res = await Auth.fetch('/v1/snapshot', { method: 'POST' });
                 const d = await res.json();
                 if (res.ok && d.success) {
                     btn.innerHTML = '<i class="fas fa-check"></i>Saved';

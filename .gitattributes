@@ -2,15 +2,16 @@
 # Windows rewrites LF to CRLF inside them on checkout, which silently
 # corrupts the file — a PDF that opens here would fail to open after a
 # fresh clone.
-*.pdf   binary
+*.pdf filter=lfs diff=lfs merge=lfs -text
 *.pt filter=lfs diff=lfs merge=lfs -text
-*.png   binary
-*.jpg   binary
-*.jpeg  binary
-*.ico   binary
-*.mp3   binary
-*.woff  binary
-*.woff2 binary
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.ico filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.woff filter=lfs diff=lfs merge=lfs -text
+*.woff2 filter=lfs diff=lfs merge=lfs -text
+*.db filter=lfs diff=lfs merge=lfs -text
 # Source stays LF in the repo and is checked out however the platform wants.
 *.py    text eol=lf
 *.js    text eol=lf

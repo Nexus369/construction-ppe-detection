@@ -203,7 +203,7 @@ const Chatbot = {
     const typing = this._appendTyping(log);
 
     try {
-      const res = await Auth.fetch('/api/chat', {
+      const res = await Auth.fetch('/v1/chat', {
         method: 'POST',
         body: JSON.stringify({
           message: text,

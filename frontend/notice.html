@@ -318,7 +318,7 @@
             // The image is the persuasive part, so it leads — but a purged
             // one must say so rather than leaving a broken frame.
             const shot = r.available && r.has_evidence
-                ? `<img src="/api/notice/${encodeURIComponent(token)}/evidence/${r.detection_id}"
+                ? `<img src="/v1/notice/${encodeURIComponent(token)}/evidence/${r.detection_id}"
                         alt="The frame recorded at this refusal" loading="lazy">`
                 : `<div class="noshot">No image kept for this one</div>`;
 
@@ -388,7 +388,7 @@
     async function load() {
         if (!token) { show('gone'); return; }
         try {
-            const res = await fetch(`/api/notice/${encodeURIComponent(token)}`);
+            const res = await fetch(`/v1/notice/${encodeURIComponent(token)}`);
             const data = await res.json();
             if (!res.ok || !data.success) { show('gone'); return; }
             render(data.notice);
@@ -406,7 +406,7 @@
         btn.disabled = other.disabled = true;
         btn.textContent = 'Sending…';
         try {
-            const res = await fetch(`/api/notice/${encodeURIComponent(token)}/acknowledge`, {
+            const res = await fetch(`/v1/notice/${encodeURIComponent(token)}/acknowledge`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

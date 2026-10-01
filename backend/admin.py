@@ -16,7 +16,7 @@ from extensions import db
 from models import AttendanceRecord, AuditEvent, DetectionRecord, SensorAlert, User, _iso_utc
 from params import int_arg
 
-admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
+admin_bp = Blueprint("admin", __name__, url_prefix="/v1/admin")
 
 EMPTY_COUNTS = {"violations": 0, "helmets": 0, "vests": 0, "people": 0}
 EMPTY_GATE = {"granted": 0, "denied": 0}

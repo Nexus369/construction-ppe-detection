@@ -218,7 +218,7 @@
                 while (running && isLive() && !this.stopped) {
                     try {
                         const res = await Auth.fetch(
-                            `/api/cctv/stream?id=${encodeURIComponent(this.id)}`);
+                            `/v1/cctv/stream?id=${encodeURIComponent(this.id)}`);
                         if (!res.ok || !res.body) throw new Error(String(res.status));
 
                         const reader = res.body.getReader();
@@ -280,7 +280,7 @@
             async tick() {
                 if (!running || isLive() || this.stopped) return;
                 try {
-                    const res = await Auth.fetch(`/api/cctv/snapshot?id=${encodeURIComponent(this.id)}`);
+                    const res = await Auth.fetch(`/v1/cctv/snapshot?id=${encodeURIComponent(this.id)}`);
                     if (!res.ok) throw new Error(String(res.status));
                     const blob = await res.blob();
                     if (!blob.size) throw new Error('empty');
@@ -316,7 +316,7 @@
         async function discover() {
             let list = [];
             try {
-                const res = await Auth.fetch('/api/cctv/cameras');
+                const res = await Auth.fetch('/v1/cctv/cameras');
                 const d = await res.json();
                 list = d.cameras || [];
             } catch (e) { return; }

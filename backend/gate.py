@@ -16,7 +16,7 @@ import site_settings
 from extensions import db, limiter
 from models import AttendanceRecord, SensorAlert, User, _iso_utc
 
-gate_bp = Blueprint("gate", __name__, url_prefix="/api/gate")
+gate_bp = Blueprint("gate", __name__, url_prefix="/v1/gate")
 
 
 def device_required(fn):

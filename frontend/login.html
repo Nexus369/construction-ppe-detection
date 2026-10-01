@@ -215,7 +215,7 @@
             guestBtn.textContent = 'Starting guest session...';
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/auth/guest`, { method: 'POST' });
+                const res = await fetch(`${window.API_BASE_URL}/v1/auth/guest`, { method: 'POST' });
                 const data = await res.json();
                 if (!res.ok || !data.success) {
                     showError(data.message || 'Could not start a guest session');
@@ -236,7 +236,7 @@
         async function handleGoogleCredentialResponse(response) {
             clearError();
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/auth/google`, {
+                const res = await fetch(`${window.API_BASE_URL}/v1/auth/google`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ credential: response.credential }),
@@ -281,7 +281,7 @@
             submitBtn.textContent = 'Signing in...';
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/auth/login`, {
+                const res = await fetch(`${window.API_BASE_URL}/v1/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -314,7 +314,7 @@
             submitBtn.textContent = 'Creating account...';
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/auth/signup`, {
+                const res = await fetch(`${window.API_BASE_URL}/v1/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

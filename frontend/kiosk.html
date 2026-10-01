@@ -299,7 +299,7 @@
         async function speak(msg) {
             stopAnnouncing();
             try {
-                const res = await Auth.fetch(`/api/speech?text=${encodeURIComponent(msg)}`);
+                const res = await Auth.fetch(`/v1/speech?text=${encodeURIComponent(msg)}`);
                 if (res.ok) {
                     const url = URL.createObjectURL(await res.blob());
                     const audio = new Audio(url);
@@ -361,7 +361,7 @@
             // A gate display has nobody to type credentials, so it opens its
             // own guest session. Named identity arrives with the badge reader.
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/auth/guest`, { method: 'POST' });
+                const res = await fetch(`${window.API_BASE_URL}/v1/auth/guest`, { method: 'POST' });
                 const data = await res.json();
                 if (!res.ok || !data.success) return false;
                 Auth.setSession(data.token, data.user);
@@ -371,7 +371,7 @@
 
         async function update() {
             try {
-                const res = await Auth.fetch('/api/status');
+                const res = await Auth.fetch('/v1/status');
                 if (!res.ok) return;
                 const d = await res.json();
                 syncRequirements(d.required_ppe || []);
@@ -398,7 +398,7 @@
                 return;
             }
 
-            try { await Auth.fetch('/api/start', { method: 'POST' }); } catch (e) { /* ignore */ }
+            try { await Auth.fetch('/v1/start', { method: 'POST' }); } catch (e) { /* ignore */ }
 
             cam = new CameraFeed(el('videoFeed'), el('captureCanvas'), null);
             // Only box up equipment this site requires — a red "NO-Mask" over

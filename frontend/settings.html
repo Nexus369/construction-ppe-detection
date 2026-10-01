@@ -187,7 +187,7 @@
 
         async function load() {
             try {
-                const res = await Auth.fetch('/api/admin/settings');
+                const res = await Auth.fetch('/v1/admin/settings');
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
                 detectable = d.detectable_ppe;
@@ -235,7 +235,7 @@
             btn.disabled = true;
             refreshSaveState('Saving…');
             try {
-                const res = await Auth.fetch('/api/admin/settings', {
+                const res = await Auth.fetch('/v1/admin/settings', {
                     method: 'PUT',
                     body: JSON.stringify(current),
                 });

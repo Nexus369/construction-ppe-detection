@@ -305,7 +305,7 @@
 
         async function load() {
             try {
-                const res = await Auth.fetch(`/api/admin/analytics?days=${days}`);
+                const res = await Auth.fetch(`/v1/admin/analytics?days=${days}`);
                 if (!res.ok) throw new Error('Request failed');
                 const d = await res.json();
 
