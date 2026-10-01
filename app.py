@@ -1,15 +1,33 @@
 import os
 import sys
+
+# 0. Suppress harmless ONNX Runtime device discovery warnings
+os.environ["ORT_LOG_SEVERITY_LEVEL"] = "3"
+
+# 1. ZeroGPU Support for Hugging Face Spaces (MUST be imported before any CUDA / Torch / ONNX / CV2)
+try:
+    import spaces
+    HAS_SPACES = True
+except ImportError:
+    HAS_SPACES = False
+    class spaces:
+        @staticmethod
+        def GPU(func=None, **kwargs):
+            if func is not None:
+                return func
+            def decorator(f):
+                return f
+            return decorator
+
 import secrets
 import cv2
 import numpy as np
 
-# 1. Environment & Path configuration
+# 2. Environment & Path configuration
 DEV_SECRET = "dev-secret-change-me"
 DEV_JWT_SECRET = "dev-jwt-secret-change-me"
 
-# If deployed on Hugging Face Spaces (SPACE_ID is set) and secrets were omitted,
-# auto-generate secure tokens so the app boots safely without crashing.
+# Auto-generate secure tokens on Hugging Face Spaces if not set
 if os.environ.get("SPACE_ID"):
     if not os.environ.get("SECRET_KEY") or os.environ.get("SECRET_KEY") == DEV_SECRET:
         os.environ["SECRET_KEY"] = secrets.token_urlsafe(48)
@@ -18,12 +36,18 @@ if os.environ.get("SPACE_ID"):
     if not os.environ.get("TRUSTED_PROXY_HOPS"):
         os.environ["TRUSTED_PROXY_HOPS"] = "1"
 
-# Ensure backend directory is in sys.path
+# Add backend directory to sys.path
 backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from app import create_app
+# Import Flask create_app via importlib to avoid root app.py name collision
+import importlib.util
+spec = importlib.util.spec_from_file_location("backend_app_module", os.path.join(backend_dir, "app.py"))
+backend_app_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(backend_app_module)
+create_app = backend_app_module.create_app
+
 from ppe_detection import load_model, process_frame
 
 # Initialize Flask WSGI app (handles all /api/* requests from Vercel)
@@ -32,7 +56,13 @@ flask_app = create_app()
 # Load YOLO / ONNX model
 model = load_model()
 
-# 2. Define Gradio Interface for interactive ML testing
+# Satisfy ZeroGPU scanner at startup
+@spaces.GPU(duration=1)
+def _zerogpu_probe():
+    return True
+
+# 3. Define Gradio Interface for interactive ML testing
+@spaces.GPU
 def detect_ppe(image, conf_threshold):
     if image is None:
         return None, "### ⚠️ No image provided\nPlease upload an image or capture a webcam photo."
@@ -69,7 +99,10 @@ def detect_ppe(image, conf_threshold):
 
 import gradio as gr
 from fastapi import FastAPI
-from starlette.middleware.wsgi import WSGIMiddleware
+try:
+    from a2wsgi import WSGIMiddleware
+except ImportError:
+    from starlette.middleware.wsgi import WSGIMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 with gr.Blocks(title="SafetyFirst PPE Detection & API Server") as demo:
@@ -90,7 +123,9 @@ with gr.Blocks(title="SafetyFirst PPE Detection & API Server") as demo:
             
     submit_btn.click(fn=detect_ppe, inputs=[input_img, conf_slider], outputs=[output_img, report_md])
 
-# 3. Create Unified ASGI Application
+demo.queue()
+
+# 4. Create Unified ASGI Application
 # Routes:
 #   - /api/*       -> Flask API (Auth, Attendance, Gate, CCTV, Notices, etc. for Vercel)
 #   - /console*    -> Flask Frontend Console fallback
@@ -121,5 +156,21 @@ app = UnifiedApp(fastapi_app, flask_wsgi)
 
 if __name__ == "__main__":
     import uvicorn
+    import socket
+    import time
+
     port = int(os.environ.get("PORT", 7860))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+
+    # Port reuse wait loop for container redeploys
+    for attempt in range(10):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind(("0.0.0.0", port))
+                break
+            except OSError:
+                print(f"Port {port} busy, waiting for release (attempt {attempt + 1}/10)...", flush=True)
+                time.sleep(1)
+
+    print(f"Starting SafetyFirst API & Gradio Server on 0.0.0.0:{port}...", flush=True)
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
