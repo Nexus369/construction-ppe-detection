@@ -5,7 +5,7 @@
 // The page is served over HTTPS in production, so the API must be HTTPS too —
 // a browser blocks an https:// page from calling an http:// endpoint.
 // ---------------------------------------------------------------------------
-const PRODUCTION_API = 'https://nexus3-safetyfirst-api.hf.space';
+const PRODUCTION_API = '';
 
 // Where the frontend looks for the API.
 //
